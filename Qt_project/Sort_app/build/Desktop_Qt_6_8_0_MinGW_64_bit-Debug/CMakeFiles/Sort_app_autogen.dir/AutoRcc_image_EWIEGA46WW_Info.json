@@ -1,0 +1,33 @@
+{
+	"BUILD_DIR" : "C:/Users/Admin/Documents/Qt_project/Sort_app/build/Desktop_Qt_6_8_0_MinGW_64_bit-Debug/Sort_app_autogen",
+	"CMAKE_BINARY_DIR" : "C:/Users/Admin/Documents/Qt_project/Sort_app/build/Desktop_Qt_6_8_0_MinGW_64_bit-Debug",
+	"CMAKE_CURRENT_BINARY_DIR" : "C:/Users/Admin/Documents/Qt_project/Sort_app/build/Desktop_Qt_6_8_0_MinGW_64_bit-Debug",
+	"CMAKE_CURRENT_SOURCE_DIR" : "C:/Users/Admin/Documents/Qt_project/Sort_app",
+	"CMAKE_SOURCE_DIR" : "C:/Users/Admin/Documents/Qt_project/Sort_app",
+	"CROSS_CONFIG" : false,
+	"GENERATOR" : "Ninja",
+	"INCLUDE_DIR" : "C:/Users/Admin/Documents/Qt_project/Sort_app/build/Desktop_Qt_6_8_0_MinGW_64_bit-Debug/Sort_app_autogen/include",
+	"INPUTS" : 
+	[
+		"C:/Users/Admin/Documents/Qt_project/Sort_app/image/up-loading.png",
+		"C:/Users/Admin/Documents/Qt_project/Sort_app/image/home_icon.png",
+		"C:/Users/Admin/Documents/Qt_project/Sort_app/image/downloads.png",
+		"C:/Users/Admin/Documents/Qt_project/Sort_app/image/back.png",
+		"C:/Users/Admin/Documents/Qt_project/Sort_app/image/loading.png",
+		"C:/Users/Admin/Documents/Qt_project/Sort_app/image/search.png",
+		"C:/Users/Admin/Documents/Qt_project/Sort_app/image/right.png",
+		"C:/Users/Admin/Documents/Qt_project/Sort_app/image/start-button.png",
+		"C:/Users/Admin/Documents/Qt_project/Sort_app/image/play.png"
+	],
+	"LOCK_FILE" : "C:/Users/Admin/Documents/Qt_project/Sort_app/build/Desktop_Qt_6_8_0_MinGW_64_bit-Debug/CMakeFiles/Sort_app_autogen.dir/AutoRcc_image_EWIEGA46WW_Lock.lock",
+	"MULTI_CONFIG" : false,
+	"OPTIONS" : [ "--no-zstd", "-name", "image" ],
+	"OUTPUT_CHECKSUM" : "EWIEGA46WW",
+	"OUTPUT_NAME" : "qrc_image.cpp",
+	"RCC_EXECUTABLE" : "C:/Qt/6.8.0/mingw_64/bin/rcc.exe",
+	"RCC_LIST_OPTIONS" : [ "--list" ],
+	"SETTINGS_FILE" : "C:/Users/Admin/Documents/Qt_project/Sort_app/build/Desktop_Qt_6_8_0_MinGW_64_bit-Debug/CMakeFiles/Sort_app_autogen.dir/AutoRcc_image_EWIEGA46WW_Used.txt",
+	"SOURCE" : "C:/Users/Admin/Documents/Qt_project/Sort_app/image.qrc",
+	"USE_BETTER_GRAPH" : true,
+	"VERBOSITY" : 0
+}
