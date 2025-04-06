@@ -1,0 +1,147 @@
+body {
+  width: 350px;
+  padding: 15px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 14px;
+  color: #333;
+  background-color: #f9f9f9;
+  margin: 0;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+h2 {
+  margin: 0 0 10px 0;
+  color: #2c3e50;
+  text-align: center;
+}
+
+h3 {
+  margin: 10px 0 5px 0;
+  font-size: 14px;
+  color: #2c3e50;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.input-group input {
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.input-group input:focus {
+  outline: none;
+  border-color: #4285f4;
+  box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
+}
+
+.search-group {
+  display: flex;
+}
+
+#searchInput {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+
+#searchInput:focus {
+  outline: none;
+  border-color: #4285f4;
+  box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
+}
+
+button {
+  padding: 8px 12px;
+  background-color: #4285f4;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+button:hover {
+  background-color: #3367d6;
+}
+
+button:active {
+  background-color: #2a56c6;
+}
+
+.fill-button {
+  margin-top: 10px;
+  background-color: #0f9d58;
+}
+
+.fill-button:hover {
+  background-color: #0b8043;
+}
+
+.saved-pairs {
+  max-height: 250px;
+  overflow-y: auto;
+  border-top: 1px solid #eee;
+  padding-top: 10px;
+}
+
+#noPairsMessage {
+  color: #777;
+  font-style: italic;
+  padding: 5px 0;
+  display: none;
+}
+
+#pairsList {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.pair-item {
+  padding: 8px;
+  margin: 5px 0;
+  background-color: white;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background-color 0.2s;
+}
+
+.pair-item:hover {
+  background-color: #f5f5f5;
+}
+
+.pair-item span {
+  flex-grow: 1;
+  margin-right: 10px;
+  word-break: break-word;
+}
+
+.delete-btn {
+  background-color: #db4437;
+  padding: 4px 8px;
+  font-size: 12px;
+  min-width: 50px;
+}
+
+.delete-btn:hover {
+  background-color: #c53929;
+}
