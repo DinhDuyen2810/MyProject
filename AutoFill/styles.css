@@ -1,5 +1,6 @@
 body {
   width: 350px;
+  height: 520px; /* hoặc 480px tuỳ nhu cầu */
   padding: 15px;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   font-size: 14px;
@@ -144,4 +145,69 @@ button:active {
 
 .delete-btn:hover {
   background-color: #c53929;
+}
+
+.edit-btn {
+  background-color: #5a960c;
+  padding: 4px 8px;
+  font-size: 12px;
+  min-width: 50px;
+  margin-left: 5px;
+}
+
+.edit-btn:hover {
+  background-color: #4c8008;
+}
+
+.pair-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.edit-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: white;
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  z-index: 9999;
+  width: 300px;
+}
+
+.edit-dialog .input-center-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.edit-dialog input {
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.dialog-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.dialog-buttons button {
+  min-width: 60px;
+}
+
+.edit-dialog button {
+  background-color: white;
+  color: #333;
+  border: 1px solid #ccc;
+}
+
+.edit-dialog button:hover {
+  background-color: #f0f0f0;
 }
