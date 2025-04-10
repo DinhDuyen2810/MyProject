@@ -178,16 +178,54 @@ function findBestMatch(cleanedText, pairs) {
     let bestMatch = null;
     let bestScore = 0;
 
+    // Danh sách từ đồng nghĩa
+    const synonymMap = {
+        'họ tên': ['họ và tên', 'họ, tên', 'tên và họ', 'tên đầy đủ', 'your name', 'full name', 'hvt', 'hoten', 'ten day du', 'ten cua ban'],
+        'ngày sinh': ['ngày tháng năm sinh', 'ngày, tháng, năm sinh', 'dob', 'birthdate', 'sinh nhật', 'ngaysinh', 'ns', 'birth day', 'ngay sinh nhat', 'birth'],
+        'sdt': ['số điện thoại', 'điện thoại', 'phone number', 'mobile', 'liên lạc', 'sdt', 'so dt', 'so dien thoai', 'so di dong', 'phone'],
+        'email': ['địa chỉ email', 'thư điện tử', 'email address', 'mail', 'e-mail', 'gmail', 'email của bạn', 'dc email', 'email cá nhân', 'dia chi mail'],
+        'giới tính': ['giới', 'nam hay nữ', 'gender', 'sex', 'gioitinh', 'gt', 'nam nu', 'male or female', 'gioi', 'gioi tinh'],
+        'địa chỉ': ['nơi ở', 'chỗ ở hiện tại', 'address', 'địa chỉ hiện tại', 'nơi cư trú', 'dia chi', 'address now', 'dia chi lien he', 'cho o', 'noio'],
+        'ngành học': ['chuyên ngành', 'ngành bạn học', 'field of study', 'major', 'nganh', 'nganh hoc', 'nganh cua ban', 'study field', 'major name', 'chuyen nganh'],
+        'trường học': ['tên trường', 'trường bạn đang học', 'university', 'school name', 'truong hoc', 'truong', 'school', 'uni', 'ten truong', 'trg'],
+        'lớp': ['lớp học', 'tên lớp', 'class', 'lop', 'lop hoc', 'class name', 'ten lop', 'ma lop', 'classroom', 'class id'],
+        'mã sinh viên': ['student id', 'mã số sinh viên', 'mssv', 'ma sinh vien', 'student code', 'student number', 'msv', 'studentid', 'ma sv', 'id sinh vien'],
+        'ngày đăng ký': ['ngày ghi danh', 'registration date', 'ngày tham gia', 'ngay dang ky', 'ngay dk', 'registration', 'ngay vao', 'join date', 'dk ngay', 'register day'],
+        'thời gian rảnh': ['khoảng thời gian rảnh', 'free time', 'thời gian trống', 'tgian ranh', 'tg rảnh', 'rảnh khi nào', 'thoi gian trong', 'tg trong', 'free period', 'luc ranh'],
+        'sở thích': ['hobby', 'hoạt động yêu thích', 'interest', 'so thich', 'st', 'yeu thich', 'hoat dong ua thich', 'thu vui', 'sothich', 'favorite'],
+        'câu hỏi bảo mật': ['security question', 'câu hỏi dự phòng', 'cau hoi bao mat', 'question for recovery', 'chbm', 'question to unlock', 'question de mo', 'question backup', 'ch an toan', 'phuc hoi cau hoi'],
+        'mật khẩu': ['password', 'mật mã', 'pass', 'mat khau', 'pw', 'passwd', 'matma', 'pass code', 'pass word', 'ma bao mat'],
+        'tình trạng hôn nhân': ['hôn nhân', 'marital status', 'độc thân hay đã kết hôn', 'hon nhan', 'tthn', 'married?', 'doc than/kethon', 'married status', 'hn', 'tthn'],
+        'ngôn ngữ': ['language', 'ngôn ngữ sử dụng', 'ngon ngu', 'language used', 'lang', 'ngonngu', 'language select', 'language option', 'ngon ngu chinh', 'language preferred'],
+        'mức thu nhập': ['thu nhập', 'income', 'khoảng lương', 'muc luong', 'thu nhap ca nhan', 'salary', 'income level', 'money earn', 'tn', 'luong'],
+        'nơi sinh': ['quê quán', 'birthplace', 'quê', 'noi sinh', 'birth place', 'birth location', 'noi sinh song', 'que', 'nơi đẻ', 'place born'],
+        'quốc tịch': ['nationality', 'tình trạng quốc tịch', 'quoc tich', 'qt', 'country', 'national', 'quoc gia', 'tich quoc', 'country of citizenship', 'citizen'],
+        'cmnd': ['căn cước công dân', 'cccd', 'chứng minh nhân dân', 'id number', 'số cmnd/cccd', 'số cccd', 'cmnd/cccd', 'id', 'so cmnd', 'so cccd'],
+        'mã số thuế': ['tax code', 'mst', 'ma so thue', 'ma thue', 'tax id', 'tax number', 'taxcode', 'ma so', 'mstn', 'id thue'],
+        'tôn giáo': ['religion', 'đạo', 'ton giao', 'dao', 'religious belief', 'faith', 'giao phai', 'religion type', 'dao nao', 'tg'],
+        'dân tộc': ['ethnicity', 'dân tộc thiểu số', 'dan toc', 'dt', 'race', 'ethnic', 'minority', 'nhom dan toc', 'ethnic group', 'dan toc nao'],
+        'người liên hệ khẩn cấp': ['liên hệ khẩn cấp', 'emergency contact', 'nguoi lien he', 'nguoi lien he khan cap', 'lhkc', 'ec', 'nguoi khan cap', 'emergency person', 'lien lac gap', 'nguoi bao tin'],
+        'sở trường': ['điểm mạnh', 'ưu điểm', 'strength', 'so truong', 'uu diem', 'ky nang manh', 'strong point', 'st', 'skillset', 'so truong chinh'],
+        'kinh nghiệm làm việc': ['work experience', 'quá trình công tác', 'kinh nghiem lam viec', 'knlv', 'job history', 'work background', 'viec da lam', 'job exp', 'quá trình làm việc', 'work timeline'],
+        'trình độ học vấn': ['trình độ', 'học vấn', 'education level', 'trinh do', 'hoc van', 'bang cap', 'academic level', 'trinh do hoc van', 'tdhv', 'education'],
+        'kỹ năng': ['skills', 'năng lực', 'khả năng', 'ky nang', 'kỹ năng chuyên môn', 'skillset', 'ability', 'kn', 'nang luc', 'skills list'],
+        'mục tiêu nghề nghiệp': ['career goals', 'định hướng nghề nghiệp', 'muc tieu', 'nghe nghiep', 'career objective', 'dinh huong', 'goal job', 'job goal', 'career aim', 'job dream'],
+      };
+      
+
+    // Tạo danh sách mở rộng từ các câu hỏi đã lưu
     pairs.forEach(pair => {
-        const pairQuestionLower = pair.question.toLowerCase();
+        const questionLower = pair.question.toLowerCase();
+        const synonyms = synonymMap[questionLower] || [];
+
         let score = 0;
 
-        if (cleanedLower.includes(pairQuestionLower) || pairQuestionLower.includes(cleanedLower)) {
-            score = Math.max(cleanedLower.length, pairQuestionLower.length);
-        }
-
-        if (cleanedLower === pairQuestionLower) {
+        if (cleanedLower === questionLower) {
             score = 100;
+        } else if (cleanedLower.includes(questionLower) || questionLower.includes(cleanedLower)) {
+            score = Math.max(cleanedLower.length, questionLower.length);
+        } else if (synonyms.some(syn => cleanedLower.includes(syn) || syn.includes(cleanedLower))) {
+            score = 80;
         }
 
         if (score > bestScore) {

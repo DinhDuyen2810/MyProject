@@ -13,20 +13,24 @@
     <div class="input-group">
       <input type="text" id="questionInput" placeholder="Nhập câu hỏi">
       <input type="text" id="answerInput" placeholder="Nhập câu trả lời">
-      <button id="addBtn">Thêm</button>
+      <div class="button-group">
+        <button id="addBtn">Thêm</button>
+        <button id="fillBtn" class="fill-button">Tự động điền Form</button>
+      </div>
+      
     </div>
     
     <div class="search-group">
       <input type="text" id="searchInput" placeholder="Tìm kiếm câu hỏi hoặc câu trả lời...">
     </div>
     
+    <h3>Danh sách câu hỏi đã lưu:</h3>
     <div class="saved-pairs">
-      <h3>Danh sách câu hỏi đã lưu:</h3>
       <div id="noPairsMessage">Chưa có câu hỏi nào được lưu</div>
       <ul id="pairsList"></ul>
     </div>
     
-    <button id="fillBtn" class="fill-button">Tự động điền Form</button>
+    
     <a href="https://forms.gle/ny2Je24BkP2iVLXB9" target="_blank" rel="noopener noreferrer">Link khảo sát</a>
   </div>
   

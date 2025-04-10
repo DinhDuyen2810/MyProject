@@ -1,6 +1,5 @@
 body {
   width: 350px;
-  height: 520px; /* hoặc 480px tuỳ nhu cầu */
   padding: 15px;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   font-size: 14px;
@@ -86,7 +85,6 @@ button:active {
 }
 
 .fill-button {
-  margin-top: 10px;
   background-color: #0f9d58;
 }
 
@@ -94,8 +92,13 @@ button:active {
   background-color: #0b8043;
 }
 
+.saved-pairs-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
 .saved-pairs {
-  max-height: 250px;
+  max-height: 240px;
   overflow-y: auto;
   border-top: 1px solid #eee;
   padding-top: 10px;
@@ -211,3 +214,18 @@ button:active {
 .edit-dialog button:hover {
   background-color: #f0f0f0;
 }
+
+.button-group {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.button-group button:first-child {
+  flex: 1;
+}
+
+.button-group button:last-child {
+  flex: 1.2;
+}
+
