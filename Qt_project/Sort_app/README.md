@@ -66,7 +66,7 @@ Cung cấp mô tả chi tiết, ưu – nhược điểm và animation trực qu
 
 Bạn có thể tải phần mềm đã biên dịch sẵn tại:
 
-🔗 [Download SortApp.zip](https://github.com/DinhDuyen2810/MyProject/raw/Qt_project/Sort_app/build/Desktop_Qt_6_8_0_MinGW_64_bit-Release/SortApp.zip)
+🔗 [Download SortApp.zip](https://github.com/DinhDuyen2810/MyProject/raw/main/Qt_project/Sort_app/build/Desktop_Qt_6_8_0_MinGW_64_bit-Release/SortApp.zip)
 
 **Hướng dẫn chạy phần mềm:**
 
