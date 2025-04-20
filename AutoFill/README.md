@@ -17,7 +17,7 @@
 
 ## 🛠 Cài đặt
 
-1. Tải mã nguồn về máy (clone từ GitHub hoặc tải file zip [Download AutoFill.zip](https://github.com/DinhDuyen2810/MyProject/raw/AutoFill/AutoFill.zip)).
+1. Tải mã nguồn về máy (clone từ GitHub hoặc tải file zip [Download AutoFill.zip](https://github.com/DinhDuyen2810/MyProject/raw/AutoFill/AutoFill/AutoFill.zip)).
 2. Mở trình duyệt Chrome, truy cập `chrome://extensions`.
 3. Bật **Chế độ dành cho nhà phát triển** (Developer Mode).
 4. Nhấn **Tải tiện ích đã giải nén** (Load unpacked).
