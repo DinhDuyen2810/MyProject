@@ -265,10 +265,6 @@ function findBestMatch(cleanedText, pairs) {
     pairs.forEach(pair => {
         const questionNorm = normalize(pair.question);
         const pairKey = findCanonicalKey(pair.question);
-        // if(inputNorm == "họ và tên sinh viên"){
-        //     console.log("QuestionNorm: \n", questionNorm);
-        //     console.log("pairKey: \n", pairKey);
-        // }
 
         let score = 0;
 
@@ -278,7 +274,7 @@ function findBestMatch(cleanedText, pairs) {
         } else if (pairKey && inputKey && pairKey === inputKey) {
             score = 99;
         } else if (inputNorm.includes(questionNorm) || questionNorm.includes(inputNorm)) {
-            score = questionNorm.length * 100 / Math.max(inputNorm.length, questionNorm.length);
+            score = Math.min(inputNorm.length, questionNorm.length) * 100 / Math.max(inputNorm.length, questionNorm.length);
         }
 
         if (score > bestScore) {
@@ -286,7 +282,9 @@ function findBestMatch(cleanedText, pairs) {
             bestMatch = pair;
         }
     });
-    console.log(`Điểm tương đồng cho câu hỏi "${cleanedText}": ${bestScore}`);
+    if(bestScore != 0){
+        console.log(`Độ trùng khớp cho câu hỏi "${cleanedText}": ${bestScore}`);
+    }
     // console.log('Input:', inputNorm);
     // console.log('Key:', inputKey);
     return bestMatch;
