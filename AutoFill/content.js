@@ -184,7 +184,7 @@ function findBestMatch(cleanedText, pairs) {
         'địa chỉ': ['nơi ở', 'chỗ ở hiện tại', 'address', 'địa chỉ hiện tại', 'nơi cư trú', 'dia chi', 'địa chỉ cư trú hiện tại', 'dia chi lien he', 'cho o', 'noio'],
         'ngành học': ['chuyên ngành', 'ngành bạn học', 'field of study', 'major', 'nganh', 'nganh hoc', 'nganh cua ban', 'study field', 'major name', 'chuyen nganh'],
         'trường học': ['tên trường', 'trường bạn đang học', 'university', 'đơn vị đang học tậpcông tác', 'truong hoc', 'truong', 'school', 'uni', 'ten truong', 'trg'],
-        'lớp': ['lớp học', 'tên lớp', 'class', 'lop', 'lop hoc', 'class name', 'ten lop', 'ma lop', 'classroom', 'class id'],
+        'lớp': ['lớp học', 'tên lớp', 'class', 'lop', 'lop hoc', 'lớp sinh viên', 'ten lop', 'ma lop', 'classroom', 'class id'],
         'khóa': ['khóa học', 'niên khóa', 'khoá học', 'khoá', 'khoa hoc', 'khoa', 'course', 'course name', 'khoa hoc cua ban', 'khoa hoc ma ban dang theo hoc'],
         'mã sinh viên': ['student id', 'mã số sinh viên', 'mssv', 'ma sinh vien', 'student code', 'student number', 'msv', 'studentid', 'ma sv', 'id sinh vien'],
         'nơi sinh': ['quê quán', 'birthplace', 'quê', 'noi sinh', 'birth place', 'birth location', 'noi sinh song', 'que', 'nơi đẻ', 'place born'],
@@ -265,6 +265,10 @@ function findBestMatch(cleanedText, pairs) {
     pairs.forEach(pair => {
         const questionNorm = normalize(pair.question);
         const pairKey = findCanonicalKey(pair.question);
+        // if(inputNorm == "họ và tên sinh viên"){
+        //     console.log("QuestionNorm: \n", questionNorm);
+        //     console.log("pairKey: \n", pairKey);
+        // }
 
         let score = 0;
 
@@ -274,7 +278,7 @@ function findBestMatch(cleanedText, pairs) {
         } else if (pairKey && inputKey && pairKey === inputKey) {
             score = 99;
         } else if (inputNorm.includes(questionNorm) || questionNorm.includes(inputNorm)) {
-            score = questionNorm * 100 / Math.max(inputNorm.length, questionNorm.length);
+            score = questionNorm.length * 100 / Math.max(inputNorm.length, questionNorm.length);
         }
 
         if (score > bestScore) {
@@ -283,6 +287,8 @@ function findBestMatch(cleanedText, pairs) {
         }
     });
     console.log(`Điểm tương đồng cho câu hỏi "${cleanedText}": ${bestScore}`);
+    // console.log('Input:', inputNorm);
+    // console.log('Key:', inputKey);
     return bestMatch;
 }
 
