@@ -39,7 +39,8 @@ function fillGoogleForm(pairs) {
     let unansweredCount = 0;
 
     questions.forEach((questionElement, index) => {
-        const originalText = questionElement.textContent.trim();
+        const labelElement = questionElement.querySelector('[role="heading"]');
+        const originalText = labelElement ? labelElement.textContent.trim() : questionElement.textContent.trim();
         const cleanedText = cleanQuestionText(originalText);
 
         // Kiểm tra xem questionElement có chứa input hoặc textarea không
@@ -69,11 +70,11 @@ function fillGoogleForm(pairs) {
             filledCount++;
 
             // Hiển thị thông tin chi tiết cho từng câu hỏi được điền
-            console.log(`Đã điền câu ${index + 1}:`, {
-                'Câu hỏi trong form': originalText,
-                'Câu hỏi đã lưu': matchedPair.question,
-                'Câu trả lời': matchedPair.answer
-            });
+            // console.log(`Đã điền câu ${index + 1}:`, {
+            //     'Câu hỏi trong form': cleanedText,
+            //     'Câu hỏi đã lưu': matchedPair.question,
+            //     'Câu trả lời': matchedPair.answer
+            // });
         } else {
             unansweredCount++;
             //console.log(`Không tìm thấy kết quả phù hợp cho câu hỏi ${index + 1}: "${originalText}"`);
@@ -204,46 +205,6 @@ function findBestMatch(cleanedText, pairs) {
         'số tài khoản': ['số tài khoản ngân hàng', 'stk', 'số tài khoản ngân hàng', 'bank account number', 'stk ngan hang'],
     };
       
-    const phrasesToRemove = [
-        'câu trả lời của bạn',
-        'vui lòng nhập',
-        'nhập',
-        'hãy nhập',
-        'xin hãy điền',
-        'bạn hãy điền',
-        'bạn hãy nhập',
-        'điền thông tin',
-        'hãy cung cấp',
-        'please enter',
-        'enter your',
-        'your answer',
-        'cung cấp'
-    ];
-
-    // Hàm normalize có thêm loại bỏ cụm không cần thiết
-    function normalize(text) {
-        let result = text.toLowerCase();
-
-        // Xoá cụm chỉ dẫn
-        phrasesToRemove.forEach(phrase => {
-            result = result.replace(phrase, '');
-        });
-
-        // Loại bỏ phần từ dấu "*" trở đi
-        result = result.split('*')[0];
-
-        // Loại bỏ phần trong ngoặc ()
-        result = result.replace(/\(.*?\)/g, '');
-
-        result = result
-            .replace(/[^\p{L}\p{N}\s]/gu, '') // Bỏ ký tự đặc biệt
-            .replace(/\s+/g, ' ')             // Bỏ khoảng trắng dư
-            .trim();                         // Bỏ đầu đuôi
-
-        return result;
-    }
-
-
     // Hàm tìm key synonym
     function findCanonicalKey(text) {
         const textNorm = normalize(text);
@@ -256,37 +217,79 @@ function findBestMatch(cleanedText, pairs) {
         return null;
     }
 
+    // Hàm chuẩn hóa văn bản
+    function normalize(text) {
+        return text
+            .toLowerCase()                            // chuyển thành chữ thường
+            .replace(/\(.*?\)/g, '')                  // loại bỏ (nội dung)
+            .replace(/[!?]+$/g, '')                   // loại bỏ !, ??, etc. ở cuối
+            .replace(/\.\.+$/g, '')                   // loại bỏ ..., .... ở cuối
+            .replace(/\s*\/\s*/g, '/')                // chuẩn hóa dấu '/' có hoặc không có khoảng trắng 2 bên -> thành đúng 1 dấu '/'
+            .trim();                                  // xóa khoảng trắng dư
+    }    
+    
     const inputNorm = normalize(cleanedText);
     const inputKey = findCanonicalKey(cleanedText);
     
     let bestMatch = null;
     let bestScore = 0;
 
-    pairs.forEach(pair => {
-        const questionNorm = normalize(pair.question);
-        const pairKey = findCanonicalKey(pair.question);
+    if(inputKey){
+        pairs.forEach(pair => {
+            const pairNorm = normalize(pair.question); 
+            const pairKey = findCanonicalKey(pair.question);
 
-        let score = 0;
+            let score = 0;
 
+            if (inputNorm === pairNorm) {
+                score = 100;
+            } else if(pairKey === inputKey){
+                score = 99;
+            } else {
+                // Duyệt từng entry trong synonymMap
+                for (const [key, synonyms] of Object.entries(synonymMap)) {
+                    const allSynonyms = [key, ...synonyms].map(s => normalize(s));
 
-        if (inputNorm === questionNorm) {
-            score = 100;
-        } else if (pairKey && inputKey && pairKey === inputKey) {
-            score = 99;
-        } else if (inputNorm.includes(questionNorm) || questionNorm.includes(inputNorm)) {
-            score = Math.min(inputNorm.length, questionNorm.length) * 100 / Math.max(inputNorm.length, questionNorm.length);
-        }
+                    // Nếu inputNorm khớp với 1 synonym trong nhóm này
+                    if (allSynonyms.includes(inputNorm)) {
+                        // Kiểm tra pair.question có nằm trong cùng nhóm synonym không
+                        const pairNorm = normalize(pair.question);
+                        if (allSynonyms.includes(pairNorm)) {
+                            score = Math.min(inputNorm.length, pairNorm.length) * 100 / Math.max(inputNorm.length, pairNorm.length);
+                            break;
+                        }
+                    }
+                }
+            }
 
-        if (score > bestScore) {
-            bestScore = score;
-            bestMatch = pair;
-        }
-    });
-    if(bestScore != 0){
-        console.log(`Độ trùng khớp cho câu hỏi "${cleanedText}": ${bestScore}`);
+            if (score > bestScore) {
+                bestScore = score;
+                bestMatch = pair;
+            }
+        });
     }
-    // console.log('Input:', inputNorm);
-    // console.log('Key:', inputKey);
+
+    if(bestMatch === null){
+        pairs.forEach(pair => {
+            let score = 0;
+            const pairNorm = normalize(pair.question); 
+            if (inputNorm.includes(pairNorm) || pairNorm.includes(inputNorm)) {
+                score = Math.min(inputNorm.length, pairNorm.length) * 100 / Math.max(inputNorm.length, pairNorm.length);
+            } 
+            if (score > bestScore) {
+                bestScore = score;
+                bestMatch = pair;
+            }   
+        });
+    }
+    // if(bestScore != 0){
+    //     console.log(`Độ trùng khớp cho câu hỏi "${cleanedText}": ${bestScore}`);
+    // }
+    console.log(`Độ trùng khớp cho câu hỏi "${cleanedText}": ${bestScore}`);
+    console.log('Câu hỏi đã làm sạch:', inputNorm);
+    if(bestMatch != null){
+        console.log('Cau hoi tim thay la: ', bestMatch.question);
+    }
     return bestMatch;
 }
 
@@ -344,6 +347,7 @@ function fillChoice(questionElement, answer) {
         //console.warn(`Không tìm thấy lựa chọn phù hợp cho câu hỏi: "${questionElement.textContent.trim()}" với đáp án "${answer}"`);
     }
 }
+
 
 // Hàm điền vào ngày tháng năm sinh (đặc biệt đối với trường ngày tháng)
 function fillDateOfBirth(questionElement, dateOfBirth) {
