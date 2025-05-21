@@ -109,10 +109,14 @@ function fillMicrosoftForm(pairs) {
     questions.forEach((questionElement, index) => {
         // Tìm phần tử chứa tiêu đề câu hỏi
         const titleElement = questionElement.querySelector('[data-automation-id="questionTitle"]');
-        if (!titleElement) return; // Nếu không tìm thấy title, bỏ qua câu hỏi này.
+        if (!titleElement) return;
 
-        const originalText = titleElement.textContent.trim();
+        // Chỉ lấy phần tiêu đề chính 
+        const headingSpan = titleElement.querySelector('span[role="heading"] .text-format-content');
+        const originalText = headingSpan ? headingSpan.textContent.trim() : titleElement.textContent.trim();
+
         const cleanedText = cleanQuestionText(originalText);
+
 
         // Tìm câu trả lời tương ứng với câu hỏi
         const matchedPair = findBestMatch(cleanedText, pairs);
@@ -166,25 +170,27 @@ function fillMicrosoftForm(pairs) {
 
 // Hàm làm sạch câu hỏi
 function cleanQuestionText(text) {
-    let cleaned = text.replace(/^\s*\d+[.)\-\s]*\s*/i, '');  // Loại bỏ số thứ tự
-    cleaned = cleaned.replace(/[*\s]*(\(required\)|\(bắt buộc\)|\(required field\))[*\s]*$/i, '');  // Loại bỏ các từ "bắt buộc"
-    cleaned = cleaned.replace(/\*+$/g, '');  // Loại bỏ dấu * cuối câu
+    let cleaned = text.replace(/^\s*\d+[.)\-\s]*\s*/i, '');  // Loại bỏ số thứ tự đầu câu
+    cleaned = cleaned.replace(/[*\s]*(\(required\)|\(bắt buộc\)|\(required field\))[*\s]*$/i, '');  // Loại bỏ từ "bắt buộc"
+    cleaned = cleaned.replace(/\*+$/g, '');  // Loại bỏ dấu * cuối
+    cleaned = cleaned.replace(/[:：]\s*$/, ''); // ✅ Loại bỏ dấu ":" hoặc "：" ở cuối
     return cleaned.trim().replace(/\s+/g, ' ');  // Cắt khoảng trắng thừa
 }
+
 
 // Hàm tìm kết quả phù hợp nhất
 function findBestMatch(cleanedText, pairs) {
 
     // Danh sách từ đồng nghĩa
     const synonymMap = {
-        'họ tên': ['họ và tên', 'họ, tên', 'tên và họ', 'tên đầy đủ', 'your name', 'full name', 'hvt', 'hoten', 'ten day du', 'ten cua ban'],
-        'ngày sinh': ['ngày tháng năm sinh', 'ngày, tháng, năm sinh', 'dob', 'birthdate', 'sinh nhật', 'ngaysinh', 'ns', 'birth day', 'ngay sinh nhat', 'birth'],
+        'họ tên': ['họ và tên', 'họ, tên', 'tên và họ', 'tên đầy đủ', 'your name', 'full name', 'hvt', 'hoten', 'ten day du', 'ten cua ban', 'họ tên của bạn'],
+        'ngày sinh': ['ngày tháng năm sinh', 'ngày, tháng, năm sinh', 'ngày, tháng, năm sinh', 'birthdate', 'sinh nhật', 'ngaysinh', 'tháng/ngày/năm sinh', 'birth day', 'ngay sinh nhat', 'tháng/ngày/năm sinh của bạn'],
         'sdt': ['số điện thoại', 'điện thoại', 'phone number', 'sđt', 'liên lạc', 'sdt', 'so dt', 'so dien thoai', 'so di dong', 'phone'],
         'email': ['địa chỉ email', 'thư điện tử', 'email address', 'mail', 'e-mail', 'gmail', 'email của bạn', 'dc email', 'email cá nhân', 'dia chi mail'],
         'giới tính': ['giới', 'nam hay nữ', 'gender', 'sex', 'gioitinh', 'gt', 'nam nu', 'male or female', 'gioi', 'gioi tinh'],
         'địa chỉ': ['nơi ở', 'chỗ ở hiện tại', 'address', 'địa chỉ hiện tại', 'nơi cư trú', 'dia chi', 'địa chỉ cư trú hiện tại', 'dia chi lien he', 'cho o', 'noio'],
         'ngành học': ['chuyên ngành', 'ngành bạn học', 'field of study', 'major', 'nganh', 'nganh hoc', 'nganh cua ban', 'study field', 'major name', 'chuyen nganh'],
-        'trường học': ['tên trường', 'trường bạn đang học', 'university', 'đơn vị đang học tậpcông tác', 'truong hoc', 'truong', 'school', 'uni', 'ten truong', 'trg'],
+        'trường học': ['tên trường', 'trường bạn đang học', 'university', 'đơn vị đang học tập/công tác', 'truong hoc', 'đơn vị đào tạo', 'trường', 'đơn vị học tập/làm việc', 'ten truong', 'trg'],
         'lớp': ['lớp học', 'tên lớp', 'class', 'lop', 'lop hoc', 'lớp sinh viên', 'ten lop', 'ma lop', 'classroom', 'class id'],
         'khóa': ['khóa học', 'niên khóa', 'khoá học', 'khoá', 'khoa hoc', 'khoa', 'course', 'course name', 'khoa hoc cua ban', 'khoa hoc ma ban dang theo hoc'],
         'mã sinh viên': ['student id', 'mã số sinh viên', 'mssv', 'ma sinh vien', 'student code', 'student number', 'msv', 'studentid', 'ma sv', 'id sinh vien'],
