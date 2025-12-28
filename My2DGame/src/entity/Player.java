@@ -2,7 +2,6 @@ package entity;
 
 import java.awt.Graphics2D;
 import java.awt.Point;
-import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 
@@ -25,12 +24,12 @@ public class Player extends Entity{
         
         setDefaultValues();
         getPlayerImage();
-
-        screenX = gp.screenWidth / 2 - (up1.getWidth() / 4);
-        screenY = gp.screenHeight / 2 - (up1.getHeight() / 4);
-        solidPoint = new Point((int)(up1.getWidth() * 0.6 / 2), (int)(up1.getHeight() * 0.6));  
-        // để cho point nằm ngay dưới chân player(tỷ lệ theo ảnh)
-        // 0.6 is scale
+        // render player as 3x3 tiles
+        int playerRenderSize = gp.tileSize * 2;
+        screenX = gp.screenWidth / 2.0 - playerRenderSize / 2.0;
+        screenY = gp.screenHeight / 2.0 - playerRenderSize / 2.0;
+        // solid point at bottom-center of rendered sprite
+        solidPoint = new Point(playerRenderSize / 2, playerRenderSize);
         solidPointDefaultX = solidPoint.x;
         solidPointDefaultY = solidPoint.y;
     }
@@ -181,10 +180,13 @@ public class Player extends Entity{
                 }
                 break;
         }
-        AffineTransform at = new AffineTransform();
-        at.translate(screenX, screenY);
-        at.scale(0.6, 0.6);         // origin is 96 x 96
-        g2.drawImage(image, at, null);
+        int playerRenderSize = gp.tileSize * 2;
+        g2.drawImage(image,
+            (int)Math.round(screenX),
+            (int)Math.round(screenY),
+            playerRenderSize,
+            playerRenderSize,
+            null);
         
 
     }

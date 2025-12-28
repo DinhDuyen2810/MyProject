@@ -22,7 +22,7 @@ public class FloatTile {
     public int mapCols;
     public int mapRows;
 
-    public final int NULL = 0, TREE = 1, BEDROCK = 2, MOSS_ROCK_BLOCK = 3, ROCK_BLOCK = 4, FENCE = 19;
+    public final int NULL = 0, TREE = 1, BEDROCK = 2, MOSS_ROCK_BLOCK = 3, ROCK_BLOCK = 4, FENCE = 19, BRICK = 5;
 
     public FloatTile(GamePanel gp) {
         this.gp = gp;
@@ -53,6 +53,12 @@ public class FloatTile {
             floatTile[MOSS_ROCK_BLOCK].collision = true;
             floatTile[MOSS_ROCK_BLOCK].normalX = 1;
             floatTile[MOSS_ROCK_BLOCK].normalY = 2;
+
+            floatTile[BRICK] = new Tile();
+            floatTile[BRICK].image = ImageIO.read(getClass().getResourceAsStream("/res/floattiles/brick_wall.png"));
+            floatTile[BRICK].collision = true;
+            floatTile[BRICK].normalX = 1;
+            floatTile[BRICK].normalY = 2;
 
             // ========== FENCE ==========
             floatTile[FENCE] = new Tile();
@@ -138,13 +144,12 @@ public class FloatTile {
     // ================= DRAW =================
     public void draw(Graphics2D g2) {
 
-        int worldLeftX  = (int)(gp.player.worldX - gp.screenWidth / 2) / gp.tileSize - 1;
-        int worldRightX = (int)(gp.player.worldX + gp.screenWidth / 2) / gp.tileSize + 1;
-        int worldTopY   = (int)(gp.player.worldY - gp.screenHeight / 2) / gp.tileSize - 1;
-        int worldBotY   = (int)(gp.player.worldY + gp.screenHeight / 2) / gp.tileSize + 5;
+        int worldLeftX  = (int)Math.floor((gp.player.worldX - gp.screenWidth / 2.0) / gp.tileSize) - 3;
+        int worldRightX = (int)Math.floor((gp.player.worldX + gp.screenWidth / 2.0) / gp.tileSize) + 3;
+        int worldTopY   = (int)Math.floor((gp.player.worldY - gp.screenHeight / 2.0) / gp.tileSize) - 3;
+        int worldBotY   = (int)Math.floor((gp.player.worldY + gp.screenHeight / 2.0) / gp.tileSize) + 5;
 
-        boolean isDrawEntity = false;
-
+        // Draw all float tiles that are below player
         for (int row = worldTopY; row <= worldBotY; row++) {
             for (int col = worldLeftX; col <= worldRightX; col++) {
 
@@ -156,6 +161,11 @@ public class FloatTile {
                 Tile t = floatTile[tileNum];
                 if (t == null) continue;
 
+                // Only draw tiles that are below the player
+                if ((row + 1) * gp.tileSize > (gp.player.worldY + gp.player.solidPoint.y)) {
+                    continue;
+                }
+
                 BufferedImage imageToDraw = t.image;
                 if (tileNum == FENCE) {
                     imageToDraw = getFenceImage(col, row);
@@ -165,29 +175,60 @@ public class FloatTile {
                 double screenX = col * gp.tileSize - gp.player.worldX + gp.player.screenX;
                 double screenY = row * gp.tileSize - gp.player.worldY + gp.player.screenY;
 
+                int drawX = (int)Math.round(screenX) - (t.normalX / 2) * gp.tileSize;
+                int drawY = (int)Math.round(screenY) - (t.normalY - 1) * gp.tileSize;
+
+                g2.drawImage(
+                    imageToDraw,
+                    drawX,
+                    drawY,
+                    gp.tileSize * t.normalX,
+                    gp.tileSize * t.normalY,
+                    null
+                );
+            }
+        }
+
+        // Draw player once
+        gp.player.draw(g2);
+
+        // Draw all float tiles that are above player
+        for (int row = worldTopY; row <= worldBotY; row++) {
+            for (int col = worldLeftX; col <= worldRightX; col++) {
+
+                if (col < 0 || row < 0 || col >= mapCols || row >= mapRows) continue;
+
+                int tileNum = mapfloatTileNum[col][row];
+                if (tileNum <= 0 || tileNum >= floatTile.length) continue;
+
+                Tile t = floatTile[tileNum];
+                if (t == null) continue;
+
+                // Only draw tiles that are above the player
                 if ((row + 1) * gp.tileSize <= (gp.player.worldY + gp.player.solidPoint.y)) {
-                    g2.drawImage(
-                        imageToDraw,
-                        (int)screenX - (t.normalX / 2) * gp.tileSize,
-                        (int)screenY - (t.normalY - 1) * gp.tileSize,
-                        gp.tileSize * t.normalX,
-                        gp.tileSize * t.normalY,
-                        null
-                    );
-                } else {
-                    if (!isDrawEntity) {
-                        gp.player.draw(g2);
-                        isDrawEntity = true;
-                    }
-                    g2.drawImage(
-                        imageToDraw,
-                        (int)screenX - (t.normalX / 2) * gp.tileSize,
-                        (int)screenY - (t.normalY - 1) * gp.tileSize,
-                        gp.tileSize * t.normalX,
-                        gp.tileSize * t.normalY,
-                        null
-                    );
+                    continue;
                 }
+
+                BufferedImage imageToDraw = t.image;
+                if (tileNum == FENCE) {
+                    imageToDraw = getFenceImage(col, row);
+                }
+                if (imageToDraw == null) continue;
+
+                double screenX = col * gp.tileSize - gp.player.worldX + gp.player.screenX;
+                double screenY = row * gp.tileSize - gp.player.worldY + gp.player.screenY;
+
+                int drawX = (int)Math.round(screenX) - (t.normalX / 2) * gp.tileSize;
+                int drawY = (int)Math.round(screenY) - (t.normalY - 1) * gp.tileSize;
+
+                g2.drawImage(
+                    imageToDraw,
+                    drawX,
+                    drawY,
+                    gp.tileSize * t.normalX,
+                    gp.tileSize * t.normalY,
+                    null
+                );
             }
         }
     }

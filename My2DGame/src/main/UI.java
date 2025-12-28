@@ -5,7 +5,6 @@ import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 
-import object.OBJ_Diamond;
 
 public class UI {
     GamePanel gp;
@@ -18,8 +17,8 @@ public class UI {
     public UI(GamePanel gp){
         this.gp = gp;
         arial_20 = new Font("Arial", Font.PLAIN, 20);
-        OBJ_Diamond diamond = new OBJ_Diamond();
-        diamondImage = diamond.image;
+        // no diamond UI image anymore
+        diamondImage = null;
     }
 
     public void showMessage(String message){
@@ -30,11 +29,13 @@ public class UI {
     public void draw(Graphics2D g2){
         g2.setFont(arial_20);
         g2.setColor(Color.WHITE);
-        g2.drawString("FPS: " + gp.FPS, 10, 20);
-        g2.drawString("x: " + (gp.player.worldX + gp.player.solidPoint.x) + "  y: "
-                            + (gp.player.worldY + gp.player.solidPoint.y), 10, 40);
-        g2.drawImage(diamondImage, 10, 50, gp.tileSize, gp.tileSize, null);
-        g2.drawString("x " + gp.player.hasDiamond, 40, 73);
+        // Show debug info only when F3 toggled
+        if (gp.keyH.showDebug) {
+            // first coordinates then FPS
+            g2.drawString("x: " + (gp.player.worldX + gp.player.solidPoint.x) + "  y: "
+                                + (gp.player.worldY + gp.player.solidPoint.y), 10, 20);
+            g2.drawString("FPS: " + gp.currentFPS, 10, 40);
+        }
 
         // MESSAGE
         if(messageOn){

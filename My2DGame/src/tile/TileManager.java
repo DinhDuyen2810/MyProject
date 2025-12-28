@@ -55,7 +55,18 @@ public class TileManager {
             if (is == null) return;
 
             tile[id] = new Tile();
-            tile[id].image = ImageIO.read(is);
+            // load original image then pre-scale to tileSize to avoid per-frame scaling
+            java.awt.image.BufferedImage src = ImageIO.read(is);
+            if (src != null) {
+                java.awt.image.BufferedImage scaled = new java.awt.image.BufferedImage(gp.tileSize, gp.tileSize, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+                Graphics2D g = scaled.createGraphics();
+                g.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION, java.awt.RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+                g.drawImage(src, 0, 0, gp.tileSize, gp.tileSize, null);
+                g.dispose();
+                tile[id].image = scaled;
+            } else {
+                tile[id].image = null;
+            }
             tile[id].collision = collision;
 
         } catch (Exception e) {
@@ -109,10 +120,10 @@ public class TileManager {
     // ================== DRAW ==================
     public void draw(Graphics2D g2) {
 
-        int worldLeftX  = (int)(gp.player.worldX - gp.screenWidth / 2) / gp.tileSize - 1;
-        int worldRightX = (int)(gp.player.worldX + gp.screenWidth / 2) / gp.tileSize + 1;
-        int worldTopY   = (int)(gp.player.worldY - gp.screenHeight / 2) / gp.tileSize - 1;
-        int worldBotY   = (int)(gp.player.worldY + gp.screenHeight / 2) / gp.tileSize + 1;
+        int worldLeftX  = (int)Math.floor((gp.player.worldX - gp.screenWidth / 2.0) / gp.tileSize) - 3;
+        int worldRightX = (int)Math.floor((gp.player.worldX + gp.screenWidth / 2.0) / gp.tileSize) + 3;
+        int worldTopY   = (int)Math.floor((gp.player.worldY - gp.screenHeight / 2.0) / gp.tileSize) - 3;
+        int worldBotY   = (int)Math.floor((gp.player.worldY + gp.screenHeight / 2.0) / gp.tileSize) + 3;
 
         for (int col = worldLeftX; col <= worldRightX; col++) {
             for (int row = worldTopY; row <= worldBotY; row++) {
@@ -126,13 +137,13 @@ public class TileManager {
                 if (tile[tileNum] == null) continue;
                 if (tile[tileNum].image == null) continue;
 
-                int screenX = (int)(col * gp.tileSize - gp.player.worldX + gp.player.screenX);
-                int screenY = (int)(row * gp.tileSize - gp.player.worldY + gp.player.screenY);
+                double screenX = col * gp.tileSize - gp.player.worldX + gp.player.screenX;
+                double screenY = row * gp.tileSize - gp.player.worldY + gp.player.screenY;
 
                 g2.drawImage(
                         tile[tileNum].image,
-                        screenX,
-                        screenY,
+                        (int)Math.round(screenX),
+                        (int)Math.round(screenY),
                         gp.tileSize,
                         gp.tileSize,
                         null

@@ -6,6 +6,7 @@ import java.awt.event.KeyListener;
 public class KeyHandler implements KeyListener {
 
     public boolean isUpPressed, isDownPressed, isLeftPressed, isRightPressed;
+    public boolean showDebug = false; // toggled by F3
 
     @Override
     public void keyTyped(KeyEvent e) {
@@ -16,6 +17,10 @@ public class KeyHandler implements KeyListener {
         
         int code = e.getKeyCode();
         switch (code) {
+            case KeyEvent.VK_F3:
+                // toggle debug display
+                showDebug = !showDebug;
+                break;
             case KeyEvent.VK_W: case KeyEvent.VK_UP:
                 isUpPressed = true;
                 break;

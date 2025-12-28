@@ -26,14 +26,14 @@ public class SuperObject {
         double screenX = worldX - gp.player.worldX + gp.player.screenX;
         double screenY = worldY - gp.player.worldY + gp.player.screenY;
 
-        if(worldX + gp.tileSize > gp.player.worldX - gp.player.screenX &&
-                worldX - 3 * gp.tileSize < gp.player.worldX + gp.player.screenX &&
-                    worldY + gp.tileSize > gp.player.worldY - gp.player.screenY &&
-                        worldY - 3 * gp.tileSize < gp.player.worldY + gp.player.screenY){
+        if(worldX + gp.tileSize * normalX > gp.player.worldX - gp.player.screenX - gp.tileSize &&
+                worldX - gp.tileSize * normalX < gp.player.worldX + gp.player.screenX + gp.tileSize &&
+                    worldY + gp.tileSize * normalY > gp.player.worldY - gp.player.screenY - gp.tileSize &&
+                        worldY - gp.tileSize * normalY < gp.player.worldY + gp.player.screenY + gp.tileSize){
                             
             g2.drawImage(image, 
-                        (int)screenX - (normalX / 2) * gp.tileSize,
-                        (int)screenY - (normalY - 1) * gp.tileSize, 
+                        (int)Math.round(screenX) - (normalX / 2) * gp.tileSize,
+                        (int)Math.round(screenY) - (normalY - 1) * gp.tileSize, 
                         gp.tileSize * normalX,
                         gp.tileSize * normalY, null);
         }
