@@ -1,0 +1,37 @@
+1. Double Ratchet trong E2EE
+
+Trong bài thuyết trình này, nhóm em trình bày về cơ chế Double Ratchet – một cơ chế cốt lõi được sử dụng trong các hệ thống mã hóa đầu cuối như Signal. Double Ratchet cho phép hai bên nhắn tin liên tục mà vẫn đảm bảo an toàn, ngay cả khi một số khóa bí mật bị lộ trong quá trình giao tiếp.
+
+4. Tổng quan Double Ratchet
+
+Double Ratchet là sự kết hợp của hai cơ chế cập nhật khóa độc lập là Diffie-Hellman Ratchet và Symmetric Ratchet. Hai cơ chế này hoạt động song song để đảm bảo rằng khóa mã hóa luôn được thay đổi liên tục theo thời gian và theo từng tin nhắn.
+
+
+Trong Double Ratchet, Diffie-Hellman Ratchet chịu trách nhiệm cập nhật Root Key khi phát hiện public key mới từ đối phương, còn Symmetric Ratchet dựa trên HMAC để tạo ra Message Key riêng cho từng tin nhắn. Sự kết hợp này giúp hệ thống vừa đảm bảo bảo mật dài hạn, vừa bảo vệ từng tin nhắn riêng lẻ.
+
+Mục tiêu chính của việc kết hợp Diffie-Hellman Ratchet và Symmetric Ratchet là đảm bảo forward secrecy và post-compromise security. Ngay cả khi một khóa hiện tại bị lộ, các tin nhắn trong quá khứ và tương lai vẫn được bảo vệ.
+
+6.
+
+Trong cơ chế Symmetric Ratchet, HMAC được sử dụng để tạo ra các khóa mới một cách một chiều. Từ Chain Key, hệ thống tạo ra Message Key và Chain Key tiếp theo, đảm bảo rằng không thể suy ngược để lấy lại các khóa cũ.
+
+7. 
+
+Khi phát hiện public key mới từ đối phương trong header của tin nhắn, Diffie-Hellman Ratchet sẽ được kích hoạt. Hệ thống sinh ra shared secret mới, cập nhật Root Key và tạo ra các Chain Key mới, giúp phục hồi bảo mật sau khi bị tấn công.
+
+8.
+
+Khi gửi tin nhắn, hệ thống đầu tiên tạo Message Key từ Chain Key, sau đó dùng Message Key với thuật toán AES-GCM để mã hóa nội dung. Header của tin nhắn chứa các thông tin cần thiết như DH public key và chỉ số tin nhắn, và được xác thực kèm theo nội dung mã hóa.
+
+9. 
+
+Trong Double Ratchet tồn tại nhiều loại khóa khác nhau với vòng đời khác nhau. Khóa định danh tồn tại lâu dài, Root Key thay đổi theo Diffie-Hellman Ratchet, Chain Key thay đổi theo từng tin nhắn, còn Message Key chỉ tồn tại cho đúng một tin nhắn.
+
+
+Slide 15 – Ý nghĩa bảo mật: Forward Secrecy
+
+Forward Secrecy đảm bảo rằng ngay cả khi khóa hiện tại bị lộ, các tin nhắn đã gửi trong quá khứ vẫn không thể bị giải mã. Điều này đạt được nhờ việc mỗi tin nhắn sử dụng một Message Key riêng và các khóa cũ không thể suy ngược lại.
+
+Slide 16 – Post-Compromise Security
+
+Post-Compromise Security cho phép hệ thống tự phục hồi bảo mật sau khi bị lộ khóa. Khi hai bên tiếp tục trao đổi public key mới thông qua Diffie-Hellman Ratchet, các khóa mới được sinh ra và kẻ tấn công không thể tiếp tục giải mã các tin nhắn về sau.
