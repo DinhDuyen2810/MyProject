@@ -252,8 +252,8 @@ public class GamePanel extends JPanel implements Runnable{
 
         // load generated tile map (void is collidable)
         tileM.loadMapFromArray(result.mapTiles, true);
-        // empty float tiles for dungeon
-        fTileM.clearMap(maxWorldCol, maxWorldRow);
+        // load generated float tiles (bedrock border)
+        fTileM.loadMapFromArray(result.mapFloatTiles);
 
         // place door at end room
         object.OBJ_Door door = new object.OBJ_Door();

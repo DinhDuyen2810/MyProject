@@ -53,57 +53,161 @@ public class UI {
 
     private void drawMiniMap(Graphics2D g2){
         tile.RandomDungeonMap.Result dungeon = gp.getDungeonMap();
-        if (dungeon == null || dungeon.mapTiles == null) return;
-
-        int cols = dungeon.mapTiles.length;
-        int rows = dungeon.mapTiles[0].length;
+        if (dungeon == null || dungeon.rooms == null || dungeon.rooms.isEmpty()) return;
 
         int margin = 10;
-        int maxSize = 160;
-
-        double scaleX = (double)maxSize / cols;
-        double scaleY = (double)maxSize / rows;
-        double scale = Math.min(scaleX, scaleY);
-
-        int mapW = (int)Math.round(cols * scale);
-        int mapH = (int)Math.round(rows * scale);
-
-        int originX = gp.screenWidth - mapW - margin;
+        int maxSize = 110;
+        int originX = gp.screenWidth - maxSize - margin;
         int originY = margin;
 
         // background panel
         g2.setColor(new Color(0, 0, 0, 160));
-        g2.fillRect(originX - 4, originY - 4, mapW + 8, mapH + 8);
+        g2.fillRect(originX - 2, originY - 2, maxSize + 4, maxSize + 4);
 
-        // tiles
-        for (int x = 0; x < cols; x++){
-            for (int y = 0; y < rows; y++){
-                int tile = dungeon.mapTiles[x][y];
-                if (tile == 1){
-                    g2.setColor(new Color(146, 112, 72)); // dirt
-                } else {
-                    g2.setColor(new Color(30, 30, 30)); // void
-                }
-                int px = originX + (int)Math.round(x * scale);
-                int py = originY + (int)Math.round(y * scale);
-                int pw = Math.max(1, (int)Math.ceil(scale));
-                int ph = Math.max(1, (int)Math.ceil(scale));
-                g2.fillRect(px, py, pw, ph);
+        int playerTileX = (int)Math.round(gp.player.worldX / gp.tileSize);
+        int playerTileY = (int)Math.round(gp.player.worldY / gp.tileSize);
+
+        int playerRoomIndex = -1;
+        int doorRoomIndex = -1;
+
+        for (int i = 0; i < dungeon.rooms.size(); i++){
+            tile.RandomDungeonMap.RoomInfo r = dungeon.rooms.get(i);
+            if (playerTileX >= r.x && playerTileX < r.x + r.w &&
+                playerTileY >= r.y && playerTileY < r.y + r.h) {
+                playerRoomIndex = i;
+            }
+            if (dungeon.endX >= r.x && dungeon.endX < r.x + r.w &&
+                dungeon.endY >= r.y && dungeon.endY < r.y + r.h) {
+                doorRoomIndex = i;
             }
         }
 
-        // door position (end room center)
-        int doorX = originX + (int)Math.round(dungeon.endX * scale);
-        int doorY = originY + (int)Math.round(dungeon.endY * scale);
-        g2.setColor(Color.RED);
-        g2.fillOval(doorX - 2, doorY - 2, 5, 5);
+        // build abstract grid positions with equal spacing
+        int n = dungeon.rooms.size();
+        int[] gridX = new int[n];
+        int[] gridY = new int[n];
+        boolean[] placed = new boolean[n];
+        java.util.Set<String> occupied = new java.util.HashSet<>();
 
-        // player position
-        int playerTileX = (int)Math.round(gp.player.worldX / gp.tileSize);
-        int playerTileY = (int)Math.round(gp.player.worldY / gp.tileSize);
-        int playerX = originX + (int)Math.round(playerTileX * scale);
-        int playerY = originY + (int)Math.round(playerTileY * scale);
-        g2.setColor(Color.YELLOW);
-        g2.fillOval(playerX - 2, playerY - 2, 5, 5);
+        gridX[0] = 0; gridY[0] = 0; placed[0] = true;
+        occupied.add("0,0");
+
+        for (int i = 1; i < n; i++){
+            tile.RandomDungeonMap.RoomInfo r = dungeon.rooms.get(i);
+            int pIndex = r.parentIndex;
+            if (pIndex < 0 || pIndex >= n || !placed[pIndex]) {
+                pIndex = 0;
+            }
+            int px = gridX[pIndex];
+            int py = gridY[pIndex];
+
+            tile.RandomDungeonMap.RoomInfo p = dungeon.rooms.get(pIndex);
+            int dx = 0;
+            int dy = 0;
+            if (r.centerX == p.centerX) {
+                dy = Integer.compare(r.centerY, p.centerY);
+                if (dy == 0) dy = 1;
+            } else {
+                dx = Integer.compare(r.centerX, p.centerX);
+                if (dx == 0) dx = 1;
+            }
+
+            int nx = px + dx;
+            int ny = py + dy;
+            if (occupied.contains(nx + "," + ny)) {
+                boolean found = false;
+                // try extending along same axis
+                for (int step = 2; step <= 6; step++){
+                    int tx = px + dx * step;
+                    int ty = py + dy * step;
+                    if (!occupied.contains(tx + "," + ty)) {
+                        nx = tx; ny = ty; found = true; break;
+                    }
+                }
+                if (!found) {
+                    // fallback: try orthogonal neighbors around parent
+                    int[][] candidates = new int[][]{
+                        {px + 1, py}, {px - 1, py}, {px, py + 1}, {px, py - 1}
+                    };
+                    for (int[] c : candidates){
+                        if (!occupied.contains(c[0] + "," + c[1])) {
+                            nx = c[0]; ny = c[1]; found = true; break;
+                        }
+                    }
+                }
+            }
+
+            gridX[i] = nx;
+            gridY[i] = ny;
+            placed[i] = true;
+            occupied.add(nx + "," + ny);
+        }
+
+        int minGX = gridX[0], maxGX = gridX[0];
+        int minGY = gridY[0], maxGY = gridY[0];
+        for (int i = 0; i < n; i++){
+            minGX = Math.min(minGX, gridX[i]);
+            maxGX = Math.max(maxGX, gridX[i]);
+            minGY = Math.min(minGY, gridY[i]);
+            maxGY = Math.max(maxGY, gridY[i]);
+        }
+
+        int gridW = maxGX - minGX + 1;
+        int gridH = maxGY - minGY + 1;
+        int spacing = Math.max(10, Math.min(maxSize / Math.max(1, gridW), maxSize / Math.max(1, gridH))) / 2;
+        int mapW = gridW * spacing;
+        int mapH = gridH * spacing;
+        int offsetX = originX + (maxSize - mapW) / 2;
+        int offsetY = originY + (maxSize - mapH) / 2;
+
+        // draw corridors first
+        g2.setColor(new Color(110, 110, 110));
+        for (int i = 0; i < n; i++){
+            tile.RandomDungeonMap.RoomInfo r = dungeon.rooms.get(i);
+            if (r.parentIndex >= 0 && r.parentIndex < n){
+                int x1 = offsetX + (gridX[i] - minGX) * spacing;
+                int y1 = offsetY + (gridY[i] - minGY) * spacing;
+                int x2 = offsetX + (gridX[r.parentIndex] - minGX) * spacing;
+                int y2 = offsetY + (gridY[r.parentIndex] - minGY) * spacing;
+                drawLine2px(g2, x1, y1, x2, y2);
+            }
+        }
+
+        // draw rooms as equal squares
+        int roomSize = 6;
+        for (int i = 0; i < n; i++){
+            int cx = offsetX + (gridX[i] - minGX) * spacing;
+            int cy = offsetY + (gridY[i] - minGY) * spacing;
+            int x = cx - roomSize / 2;
+            int y = cy - roomSize / 2;
+
+            if (i == playerRoomIndex) {
+                g2.setColor(Color.YELLOW);
+            } else if (i == doorRoomIndex) {
+                g2.setColor(Color.RED);
+            } else {
+                g2.setColor(new Color(180, 180, 180));
+            }
+            g2.fillRect(x, y, roomSize, roomSize);
+
+            if (i == playerRoomIndex && i == doorRoomIndex) {
+                g2.setColor(Color.RED);
+                g2.drawRect(x - 1, y - 1, roomSize + 1, roomSize + 1);
+            }
+        }
+    }
+
+    private void drawLine2px(Graphics2D g2, int x1, int y1, int x2, int y2){
+        if (x1 == x2){
+            int yStart = Math.min(y1, y2);
+            int yEnd = Math.max(y1, y2);
+            g2.fillRect(x1 - 1, yStart, 2, yEnd - yStart + 1);
+        } else if (y1 == y2){
+            int xStart = Math.min(x1, x2);
+            int xEnd = Math.max(x1, x2);
+            g2.fillRect(xStart, y1 - 1, xEnd - xStart + 1, 2);
+        } else {
+            g2.drawLine(x1, y1, x2, y2);
+        }
     }
 }

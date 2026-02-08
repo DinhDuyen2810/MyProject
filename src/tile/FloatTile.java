@@ -134,6 +134,24 @@ public class FloatTile {
         }
     }
 
+    public void loadMapFromArray(int[][] map){
+        if (map == null || map.length == 0 || map[0].length == 0) return;
+        mapCols = map.length;
+        mapRows = map[0].length;
+        mapfloatTileNum = new int[mapCols][mapRows];
+        mapCollisionFTile = new int[mapCols][mapRows];
+
+        for (int col = 0; col < mapCols; col++){
+            for (int row = 0; row < mapRows; row++){
+                int tileNum = map[col][row];
+                mapfloatTileNum[col][row] = tileNum;
+                if (tileNum >= 0 && tileNum < floatTile.length && floatTile[tileNum] != null && floatTile[tileNum].collision){
+                    mapCollisionFTile[col][row] = 1;
+                }
+            }
+        }
+    }
+
     // ================= FENCE AUTO TILE =================
     private BufferedImage getFenceImage(int col, int row) {
 

@@ -6,8 +6,13 @@ import java.util.Random;
 
 public class RandomDungeonMap {
 
+    private static final int VOID = 0;
+    private static final int DIRT = 1;
+    private static final int FLOAT_BEDROCK = 2;
+
     public static class Result {
         public int[][] mapTiles;
+        public int[][] mapFloatTiles;
         public int startX;
         public int startY;
         public int endX;
@@ -19,143 +24,183 @@ public class RandomDungeonMap {
         public int x, y, w, h;
         public int centerX;
         public int centerY;
+        public int parentIndex;
     }
 
     private static class Room {
         int x, y, w, h;
+        int centerX, centerY;
+        int parentIndex = -1;
         int centerX() { return x + w / 2; }
         int centerY() { return y + h / 2; }
     }
 
     public static Result generate(int cols, int rows, int roomCount, Random rng) {
         int[][] map = new int[cols][rows];
-        // default VOID = 0
+        int[][] floatMap = new int[cols][rows];
         for (int x = 0; x < cols; x++) {
             for (int y = 0; y < rows; y++) {
-                map[x][y] = 0;
+                map[x][y] = VOID;
+                floatMap[x][y] = 0;
             }
         }
 
         List<Room> rooms = new ArrayList<>();
-
-        // Grid settings to align centers so that adjacent rooms share same x or y
-        final int step = 16; // distance between room centers (even)
-        final int minCenterX = step / 2;
-        final int minCenterY = step / 2;
-        final int maxCenterX = cols - step / 2 - 1;
-        final int maxCenterY = rows - step / 2 - 1;
-        final int gridMaxX = Math.max(0, (maxCenterX - minCenterX) / step);
-        final int gridMaxY = Math.max(0, (maxCenterY - minCenterY) / step);
-
-        class Pos { int gx, gy; Pos(int gx, int gy){ this.gx=gx; this.gy=gy; } }
-        java.util.Map<String, Room> placed = new java.util.HashMap<>();
-        java.util.List<Pos> placedPos = new java.util.ArrayList<>();
-
-        // pick start position
-        int startGX = rng.nextInt(gridMaxX + 1);
-        int startGY = rng.nextInt(gridMaxY + 1);
-        Room startRoom = createRoomAt(map, startGX, startGY, minCenterX, minCenterY, step, cols, rows, rng, rooms);
-        if (startRoom == null) {
-            Room fallback = new Room();
-            fallback.w = 14; fallback.h = 14;
-            fallback.x = Math.max(2, cols / 2 - fallback.w / 2);
-            fallback.y = Math.max(2, rows / 2 - fallback.h / 2);
+        int retries = 0;
+        while (rooms.size() < roomCount && retries < 20) {
             rooms.clear();
-            rooms.add(fallback);
-            carveRoom(map, fallback);
-            startRoom = fallback;
-        }
-        placed.put(key(startGX, startGY), startRoom);
-        placedPos.add(new Pos(startGX, startGY));
+            retries++;
 
-        int attempts = 0;
-        while (rooms.size() < roomCount && attempts < roomCount * 400) {
-            attempts++;
+            Room first = createFirstRoom(cols, rows, rng);
+            rooms.add(first);
 
-            Pos basePos = placedPos.get(rng.nextInt(placedPos.size()));
-            int dir = rng.nextInt(4);
-            int nx = basePos.gx + (dir == 1 ? 1 : dir == 0 ? -1 : 0);
-            int ny = basePos.gy + (dir == 3 ? 1 : dir == 2 ? -1 : 0);
-
-            if (nx < 0 || ny < 0 || nx > gridMaxX || ny > gridMaxY) continue;
-            if (placed.containsKey(key(nx, ny))) continue;
-
-            Room newRoom = createRoomAt(map, nx, ny, minCenterX, minCenterY, step, cols, rows, rng, rooms);
-            if (newRoom == null) continue;
-
-            placed.put(key(nx, ny), newRoom);
-            placedPos.add(new Pos(nx, ny));
-
-            Room parent = placed.get(key(basePos.gx, basePos.gy));
-            carveCorridorStraight(map, parent.centerX(), parent.centerY(), newRoom.centerX(), newRoom.centerY());
+            int attempts = 0;
+            while (rooms.size() < roomCount && attempts < roomCount * 500) {
+                attempts++;
+                Room parent = rooms.get(rng.nextInt(rooms.size()));
+                Room next = createRoomNextTo(parent, cols, rows, rng, rooms);
+                if (next != null) {
+                    rooms.add(next);
+                }
+            }
         }
 
         if (rooms.size() < 2) {
             Room r = new Room();
             r.w = 14; r.h = 14;
-            r.x = Math.max(2, cols / 2 - r.w / 2);
-            r.y = Math.max(2, rows / 2 - r.h / 2);
+            r.centerX = cols / 2;
+            r.centerY = rows / 2;
+            r.x = Math.max(2, r.centerX - r.w / 2);
+            r.y = Math.max(2, r.centerY - r.h / 2);
             rooms.clear();
             rooms.add(r);
+        }
+
+        // carve rooms
+        for (Room r : rooms) {
             carveRoom(map, r);
         }
 
+        // carve corridors based on parent links
+        for (int i = 1; i < rooms.size(); i++) {
+            Room r = rooms.get(i);
+            if (r.parentIndex >= 0 && r.parentIndex < rooms.size()) {
+                Room p = rooms.get(r.parentIndex);
+                carveCorridorStraight(map, p.centerX, p.centerY, r.centerX, r.centerY);
+            }
+        }
+
+        addBedrockBorder(map, floatMap);
+
         Result result = new Result();
         result.mapTiles = map;
+        result.mapFloatTiles = floatMap;
 
         Room start = rooms.get(0);
         Room end = rooms.get(rooms.size() - 1);
-        result.startX = start.centerX();
-        result.startY = start.centerY();
-        result.endX = end.centerX();
-        result.endY = end.centerY();
+        result.startX = start.centerX;
+        result.startY = start.centerY;
+        result.endX = end.centerX;
+        result.endY = end.centerY;
 
         result.rooms = new ArrayList<>();
         for (Room r : rooms) {
             RoomInfo info = new RoomInfo();
             info.x = r.x; info.y = r.y; info.w = r.w; info.h = r.h;
-            info.centerX = r.centerX();
-            info.centerY = r.centerY();
+            info.centerX = r.centerX;
+            info.centerY = r.centerY;
+            info.parentIndex = r.parentIndex;
             result.rooms.add(info);
         }
 
         return result;
     }
 
-    private static String key(int gx, int gy){
-        return gx + "," + gy;
+    private static Room createFirstRoom(int cols, int rows, Random rng){
+        Room r = new Room();
+        r.w = 10;
+        r.h = 10;
+        r.centerX = 2 + rng.nextInt(Math.max(1, cols - 4));
+        r.centerY = 2 + rng.nextInt(Math.max(1, rows - 4));
+        r.x = r.centerX - r.w / 2;
+        r.y = r.centerY - r.h / 2;
+        clampRoomToBounds(r, cols, rows);
+        return r;
     }
 
-    private static Room createRoomAt(int[][] map, int gx, int gy, int minCenterX, int minCenterY,
-                                     int step, int cols, int rows, Random rng, List<Room> rooms){
-        int centerX = minCenterX + gx * step;
-        int centerY = minCenterY + gy * step;
-
-        for (int attempt = 0; attempt < 8; attempt++) {
-            int w = 14 + 2 * rng.nextInt(4); // 14,16,18,20
-            int h = 14 + 2 * rng.nextInt(4); // 14,16,18,20
-            int x = centerX - w / 2;
-            int y = centerY - h / 2;
-
-            if (x < 1 || y < 1 || x + w >= cols - 1 || y + h >= rows - 1) continue;
-
+    private static Room createRoomNextTo(Room parent, int cols, int rows, Random rng, List<Room> rooms){
+        for (int attempt = 0; attempt < 40; attempt++) {
             Room r = new Room();
-            r.x = x; r.y = y; r.w = w; r.h = h;
+            r.w = randomEven(14, 20, rng);
+            r.h = randomEvenWithMaxDiff(14, 24, r.w, 6, rng);
 
-            boolean overlaps = false;
-            for (Room other : rooms) {
-                if (intersects(r, other, 2)) {
-                    overlaps = true;
-                    break;
-                }
+            int dir = rng.nextInt(4);
+            if (dir == 0 || dir == 1) {
+                // horizontal placement
+                int minDist = parent.w / 2 + r.w / 2 + 7;
+                int extra = rng.nextInt(6); // 0-5 extra spacing
+                int dist = minDist + extra;
+                r.centerY = parent.centerY;
+                r.centerX = parent.centerX + (dir == 0 ? -dist : dist);
+            } else {
+                // vertical placement
+                int minDist = parent.h / 2 + r.h / 2 + 7;
+                int extra = rng.nextInt(6); // 0-5 extra spacing
+                int dist = minDist + extra;
+                r.centerX = parent.centerX;
+                r.centerY = parent.centerY + (dir == 2 ? -dist : dist);
             }
-            if (!overlaps) {
-                rooms.add(r);
-                carveRoom(map, r);
-                return r;
-            }
+
+            r.x = r.centerX - r.w / 2;
+            r.y = r.centerY - r.h / 2;
+
+            if (!fitsBounds(r, cols, rows)) continue;
+            if (overlapsAny(r, rooms)) continue;
+
+            r.parentIndex = rooms.indexOf(parent);
+            return r;
         }
         return null;
+    }
+
+    private static int randomEven(int min, int max, Random rng){
+        int minEven = (min % 2 == 0) ? min : min + 1;
+        int maxEven = (max % 2 == 0) ? max : max - 1;
+        if (maxEven < minEven) return minEven;
+        int count = ((maxEven - minEven) / 2) + 1;
+        return minEven + 2 * rng.nextInt(count);
+    }
+
+    private static int randomEvenWithMaxDiff(int min, int max, int base, int maxDiff, Random rng){
+        int minEven = (min % 2 == 0) ? min : min + 1;
+        int maxEven = (max % 2 == 0) ? max : max - 1;
+        int low = Math.max(minEven, base - maxDiff);
+        int high = Math.min(maxEven, base + maxDiff);
+        if (low % 2 != 0) low++;
+        if (high % 2 != 0) high--;
+        if (high < low) return base;
+        int count = ((high - low) / 2) + 1;
+        return low + 2 * rng.nextInt(count);
+    }
+
+    private static boolean overlapsAny(Room r, List<Room> rooms){
+        for (Room other : rooms) {
+            if (intersects(r, other, 2)) return true;
+        }
+        return false;
+    }
+
+    private static boolean fitsBounds(Room r, int cols, int rows){
+        return r.x >= 1 && r.y >= 1 && r.x + r.w < cols - 1 && r.y + r.h < rows - 1;
+    }
+
+    private static void clampRoomToBounds(Room r, int cols, int rows){
+        if (r.x < 1) r.x = 1;
+        if (r.y < 1) r.y = 1;
+        if (r.x + r.w >= cols - 1) r.x = cols - 2 - r.w;
+        if (r.y + r.h >= rows - 1) r.y = rows - 2 - r.h;
+        r.centerX = r.x + r.w / 2;
+        r.centerY = r.y + r.h / 2;
     }
 
     private static boolean intersects(Room a, Room b, int padding) {
@@ -173,7 +218,7 @@ public class RandomDungeonMap {
     private static void carveRoom(int[][] map, Room r) {
         for (int x = r.x; x < r.x + r.w; x++) {
             for (int y = r.y; y < r.y + r.h; y++) {
-                map[x][y] = 1; // DIRT
+                map[x][y] = DIRT;
             }
         }
     }
@@ -205,15 +250,36 @@ public class RandomDungeonMap {
         int xA = centerX - 1;
         int xB = centerX;
         if (y < 0 || y >= map[0].length) return;
-        if (xA >= 0 && xA < map.length) map[xA][y] = 1;
-        if (xB >= 0 && xB < map.length) map[xB][y] = 1;
+        if (xA >= 0 && xA < map.length) map[xA][y] = DIRT;
+        if (xB >= 0 && xB < map.length) map[xB][y] = DIRT;
     }
 
     private static void carveWidth2Horizontal(int[][] map, int x, int centerY) {
         int yA = centerY - 1;
         int yB = centerY;
         if (x < 0 || x >= map.length) return;
-        if (yA >= 0 && yA < map[0].length) map[x][yA] = 1;
-        if (yB >= 0 && yB < map[0].length) map[x][yB] = 1;
+        if (yA >= 0 && yA < map[0].length) map[x][yA] = DIRT;
+        if (yB >= 0 && yB < map[0].length) map[x][yB] = DIRT;
+    }
+
+    private static void addBedrockBorder(int[][] map, int[][] floatMap){
+        int cols = map.length;
+        int rows = map[0].length;
+
+        for (int x = 0; x < cols; x++){
+            for (int y = 0; y < rows; y++){
+                if (map[x][y] != DIRT) continue;
+                for (int dx = -1; dx <= 1; dx++){
+                    for (int dy = -1; dy <= 1; dy++){
+                        int nx = x + dx;
+                        int ny = y + dy;
+                        if (nx < 0 || ny < 0 || nx >= cols || ny >= rows) continue;
+                        if (map[nx][ny] == VOID && floatMap[nx][ny] == 0) {
+                            floatMap[nx][ny] = FLOAT_BEDROCK;
+                        }
+                    }
+                }
+            }
+        }
     }
 }

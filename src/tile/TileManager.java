@@ -12,7 +12,7 @@ import main.GamePanel;
 public class TileManager {
 
     public final int VOID = 0, DIRT = 1, GRASS = 2, WATER = 18,
-                     LAVA = 4, SAND = 5, MAGMA = 6, FARMLAND = 17;
+                     LAVA = 4, SAND = 5, MAGMA = 6, BEDROCK = 7, FARMLAND = 17;
 
     GamePanel gp;
     public Tile[] tile;
@@ -43,6 +43,7 @@ public class TileManager {
         }
         loadTile(SAND, "sand.png", false);
         loadTile(MAGMA, "magma.png", true);
+        loadTile(BEDROCK, "bedrock.png", true);
         loadTile(FARMLAND, "farmland.png", false);
     }
 
