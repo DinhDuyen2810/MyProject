@@ -66,6 +66,7 @@ public class UI {
 
         int playerTileX = (int)Math.round(gp.player.worldX / gp.tileSize);
         int playerTileY = (int)Math.round(gp.player.worldY / gp.tileSize);
+        boolean[] visited = gp.getDungeonVisited();
 
         int playerRoomIndex = -1;
         int doorRoomIndex = -1;
@@ -82,8 +83,31 @@ public class UI {
             }
         }
 
-        // build abstract grid positions with equal spacing
+        // build adjacency from parent links
         int n = dungeon.rooms.size();
+        java.util.List<java.util.List<Integer>> neighbors = new java.util.ArrayList<>();
+        for (int i = 0; i < n; i++) neighbors.add(new java.util.ArrayList<>());
+        for (int i = 0; i < n; i++){
+            tile.RandomDungeonMap.RoomInfo r = dungeon.rooms.get(i);
+            if (r.parentIndex >= 0 && r.parentIndex < n){
+                neighbors.get(i).add(r.parentIndex);
+                neighbors.get(r.parentIndex).add(i);
+            }
+        }
+
+        boolean[] visible = new boolean[n];
+        if (visited != null && visited.length == n){
+            for (int i = 0; i < n; i++){
+                if (visited[i]) {
+                    visible[i] = true;
+                    for (int nb : neighbors.get(i)) visible[nb] = true;
+                }
+            }
+        }
+
+        boolean endVisible = doorRoomIndex >= 0 && doorRoomIndex < n && visible[doorRoomIndex];
+
+        // build abstract grid positions with equal spacing
         int[] gridX = new int[n];
         int[] gridY = new int[n];
         boolean[] placed = new boolean[n];
@@ -165,6 +189,7 @@ public class UI {
         for (int i = 0; i < n; i++){
             tile.RandomDungeonMap.RoomInfo r = dungeon.rooms.get(i);
             if (r.parentIndex >= 0 && r.parentIndex < n){
+                if (!visible[i] || !visible[r.parentIndex]) continue;
                 int x1 = offsetX + (gridX[i] - minGX) * spacing;
                 int y1 = offsetY + (gridY[i] - minGY) * spacing;
                 int x2 = offsetX + (gridX[r.parentIndex] - minGX) * spacing;
@@ -176,22 +201,23 @@ public class UI {
         // draw rooms as equal squares
         int roomSize = 6;
         for (int i = 0; i < n; i++){
+            if (!visible[i]) continue;
             int cx = offsetX + (gridX[i] - minGX) * spacing;
             int cy = offsetY + (gridY[i] - minGY) * spacing;
             int x = cx - roomSize / 2;
             int y = cy - roomSize / 2;
 
-            if (i == playerRoomIndex) {
-                g2.setColor(Color.YELLOW);
-            } else if (i == doorRoomIndex) {
-                g2.setColor(Color.RED);
+            if (i == doorRoomIndex && endVisible) {
+                g2.setColor(new Color(0, 200, 0));
+            } else if (visited != null && i < visited.length && visited[i]) {
+                g2.setColor(new Color(220, 220, 220));
             } else {
-                g2.setColor(new Color(180, 180, 180));
+                g2.setColor(new Color(120, 120, 120));
             }
             g2.fillRect(x, y, roomSize, roomSize);
 
-            if (i == playerRoomIndex && i == doorRoomIndex) {
-                g2.setColor(Color.RED);
+            if (i == playerRoomIndex) {
+                g2.setColor(Color.YELLOW);
                 g2.drawRect(x - 1, y - 1, roomSize + 1, roomSize + 1);
             }
         }

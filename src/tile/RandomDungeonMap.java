@@ -9,6 +9,7 @@ public class RandomDungeonMap {
     private static final int VOID = 0;
     private static final int DIRT = 1;
     private static final int FLOAT_BEDROCK = 2;
+    private static final int MIN_GAP = 7;
 
     public static class Result {
         public int[][] mapTiles;
@@ -46,28 +47,26 @@ public class RandomDungeonMap {
         }
 
         List<Room> rooms = new ArrayList<>();
-        int retries = 0;
-        while (rooms.size() < roomCount && retries < 20) {
-            rooms.clear();
-            retries++;
+        double bestDistSq = -1;
 
-            Room first = createFirstRoom(cols, rows, rng);
-            rooms.add(first);
+        for (int attempt = 0; attempt < 40; attempt++) {
+            List<Room> candidate = buildChain(cols, rows, roomCount, rng);
+            if (candidate.size() != roomCount) continue;
 
-            int attempts = 0;
-            while (rooms.size() < roomCount && attempts < roomCount * 500) {
-                attempts++;
-                Room parent = rooms.get(rng.nextInt(rooms.size()));
-                Room next = createRoomNextTo(parent, cols, rows, rng, rooms);
-                if (next != null) {
-                    rooms.add(next);
-                }
+            Room start = candidate.get(0);
+            Room end = candidate.get(candidate.size() - 1);
+            double dx = end.centerX - start.centerX;
+            double dy = end.centerY - start.centerY;
+            double distSq = dx * dx + dy * dy;
+            if (distSq > bestDistSq) {
+                bestDistSq = distSq;
+                rooms = candidate;
             }
         }
 
         if (rooms.size() < 2) {
             Room r = new Room();
-            r.w = 14; r.h = 14;
+            r.w = 10; r.h = 10;
             r.centerX = cols / 2;
             r.centerY = rows / 2;
             r.x = Math.max(2, r.centerX - r.w / 2);
@@ -128,6 +127,18 @@ public class RandomDungeonMap {
         return r;
     }
 
+    private static Room createEndRoom(int cols, int rows, Random rng){
+        Room r = new Room();
+        r.w = 10;
+        r.h = 10;
+        r.centerX = 2 + rng.nextInt(Math.max(1, cols - 4));
+        r.centerY = 2 + rng.nextInt(Math.max(1, rows - 4));
+        r.x = r.centerX - r.w / 2;
+        r.y = r.centerY - r.h / 2;
+        clampRoomToBounds(r, cols, rows);
+        return r;
+    }
+
     private static Room createRoomNextTo(Room parent, int cols, int rows, Random rng, List<Room> rooms){
         for (int attempt = 0; attempt < 40; attempt++) {
             Room r = new Room();
@@ -137,14 +148,14 @@ public class RandomDungeonMap {
             int dir = rng.nextInt(4);
             if (dir == 0 || dir == 1) {
                 // horizontal placement
-                int minDist = parent.w / 2 + r.w / 2 + 7;
+                int minDist = parent.w / 2 + r.w / 2 + MIN_GAP;
                 int extra = rng.nextInt(6); // 0-5 extra spacing
                 int dist = minDist + extra;
                 r.centerY = parent.centerY;
                 r.centerX = parent.centerX + (dir == 0 ? -dist : dist);
             } else {
                 // vertical placement
-                int minDist = parent.h / 2 + r.h / 2 + 7;
+                int minDist = parent.h / 2 + r.h / 2 + MIN_GAP;
                 int extra = rng.nextInt(6); // 0-5 extra spacing
                 int dist = minDist + extra;
                 r.centerX = parent.centerX;
@@ -161,6 +172,58 @@ public class RandomDungeonMap {
             return r;
         }
         return null;
+    }
+
+    private static List<Room> buildChain(int cols, int rows, int roomCount, Random rng){
+        List<Room> rooms = new ArrayList<>();
+        Room start = createFirstRoom(cols, rows, rng);
+        rooms.add(start);
+
+        int attempts = 0;
+        while (rooms.size() < roomCount - 1 && attempts < roomCount * 800) {
+            attempts++;
+            Room parent = rooms.get(rooms.size() - 1);
+            Room next = createRoomNextTo(parent, cols, rows, rng, rooms);
+            if (next != null) {
+                rooms.add(next);
+            }
+        }
+
+        if (rooms.size() < roomCount - 1) {
+            return rooms;
+        }
+
+        // force end room as 10x10 connected to last room
+        Room last = rooms.get(rooms.size() - 1);
+        Room end = createEndRoom(cols, rows, rng);
+        end.parentIndex = rooms.indexOf(last);
+
+        // align end with last room axis and min gap
+        for (int attempt = 0; attempt < 80; attempt++) {
+            int dir = rng.nextInt(4);
+            if (dir == 0 || dir == 1) {
+                int minDist = last.w / 2 + end.w / 2 + MIN_GAP;
+                int dist = minDist + rng.nextInt(6);
+                end.centerY = last.centerY;
+                end.centerX = last.centerX + (dir == 0 ? -dist : dist);
+            } else {
+                int minDist = last.h / 2 + end.h / 2 + MIN_GAP;
+                int dist = minDist + rng.nextInt(6);
+                end.centerX = last.centerX;
+                end.centerY = last.centerY + (dir == 2 ? -dist : dist);
+            }
+
+            end.x = end.centerX - end.w / 2;
+            end.y = end.centerY - end.h / 2;
+
+            if (!fitsBounds(end, cols, rows)) continue;
+            if (overlapsAny(end, rooms)) continue;
+            rooms.add(end);
+            if (rooms.size() == roomCount) return rooms;
+        }
+
+        // end placement failed
+        return new ArrayList<>();
     }
 
     private static int randomEven(int min, int max, Random rng){
@@ -185,7 +248,7 @@ public class RandomDungeonMap {
 
     private static boolean overlapsAny(Room r, List<Room> rooms){
         for (Room other : rooms) {
-            if (intersects(r, other, 2)) return true;
+            if (intersects(r, other, MIN_GAP)) return true;
         }
         return false;
     }

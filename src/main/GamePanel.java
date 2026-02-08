@@ -58,6 +58,7 @@ public class GamePanel extends JPanel implements Runnable{
     private final int dungeonCount = 5;
     private final java.util.Random rng = new java.util.Random();
     private RandomDungeonMap.Result lastDungeon = null;
+    private boolean[] dungeonVisited = null;
 
     public GamePanel(){
 
@@ -135,6 +136,7 @@ public class GamePanel extends JPanel implements Runnable{
     public void update(){
         
         player.update();
+        updateDungeonVisited();
         tileM.update(); // Update animation cho tiles (nước, lava, v.v.)
         for(int i = 0; i < obj.length; ++i){
             if(obj[i] != null){
@@ -249,6 +251,7 @@ public class GamePanel extends JPanel implements Runnable{
             maxWorldCol, maxWorldRow, roomCount, rng
         );
         lastDungeon = result;
+        dungeonVisited = new boolean[result.rooms != null ? result.rooms.size() : 0];
 
         // load generated tile map (void is collidable)
         tileM.loadMapFromArray(result.mapTiles, true);
@@ -264,10 +267,32 @@ public class GamePanel extends JPanel implements Runnable{
         // move player to start room center
         player.worldX = result.startX * tileSize;
         player.worldY = result.startY * tileSize;
+        updateDungeonVisited();
     }
 
     public RandomDungeonMap.Result getDungeonMap(){
         return currentMap == MapMode.DUNGEON ? lastDungeon : null;
+    }
+
+    public boolean[] getDungeonVisited(){
+        return currentMap == MapMode.DUNGEON ? dungeonVisited : null;
+    }
+
+    private void updateDungeonVisited(){
+        if (currentMap != MapMode.DUNGEON || lastDungeon == null || lastDungeon.rooms == null) return;
+        if (dungeonVisited == null || dungeonVisited.length != lastDungeon.rooms.size()) return;
+
+        int playerTileX = (int)Math.round(player.worldX / tileSize);
+        int playerTileY = (int)Math.round(player.worldY / tileSize);
+
+        for (int i = 0; i < lastDungeon.rooms.size(); i++){
+            tile.RandomDungeonMap.RoomInfo r = lastDungeon.rooms.get(i);
+            if (playerTileX >= r.x && playerTileX < r.x + r.w &&
+                playerTileY >= r.y && playerTileY < r.y + r.h) {
+                dungeonVisited[i] = true;
+                break;
+            }
+        }
     }
 
     private void clearObjects(){
