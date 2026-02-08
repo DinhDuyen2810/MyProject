@@ -138,11 +138,7 @@ public class Player extends Entity{
                     if(voiceSecond == 1){
                         gp.playSound(1);
                     }
-                    if(hasDiamond >= 3){
-                        gp.ui.showMessage("Comming soon bro!");
-                    } else {
-                        gp.ui.showMessage("You need 3 diamonds!");
-                    }
+                    gp.onDoorEntered();
                     break;
                 default:
                     System.out.println("not diamond!");

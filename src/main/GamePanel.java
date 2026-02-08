@@ -10,9 +10,9 @@ import javax.swing.JPanel;
 import object.SuperObject;
 import tile.FloatTile;
 import tile.TileManager;
+import tile.RandomDungeonMap;
 
 public class GamePanel extends JPanel implements Runnable{
-
     //SCREEN SETTINGS
     final int originalTileSize = 12;    
     final int scale = 3;
@@ -51,6 +51,14 @@ public class GamePanel extends JPanel implements Runnable{
     public Player player = new Player(this, keyH);
     public SuperObject obj[] = new SuperObject[100];
 
+    // MAP STATE
+    public enum MapMode { HOME, DUNGEON }
+    private MapMode currentMap = MapMode.HOME;
+    private int dungeonIndex = 0;
+    private final int dungeonCount = 5;
+    private final java.util.Random rng = new java.util.Random();
+    private RandomDungeonMap.Result lastDungeon = null;
+
     public GamePanel(){
 
         this.setPreferredSize(new Dimension(screenWidth, screenHeight));
@@ -70,7 +78,7 @@ public class GamePanel extends JPanel implements Runnable{
     private final Object bufferLock = new Object();
 
     public void setupObjectInGame(){
-        aSetter.setObject();
+        loadHomeMap();
         playMusic(0);
     }
 
@@ -203,4 +211,69 @@ public class GamePanel extends JPanel implements Runnable{
         se.setFile(i);
         se.play();
     }
+
+    // =================== MAP CONTROL ===================
+    public void onDoorEntered(){
+        if (currentMap == MapMode.HOME){
+            dungeonIndex = 1;
+            loadDungeonMap(dungeonIndex);
+        } else {
+            if (dungeonIndex < dungeonCount){
+                dungeonIndex++;
+                loadDungeonMap(dungeonIndex);
+            } else {
+                loadHomeMap();
+            }
+        }
+    }
+
+    private void loadHomeMap(){
+        currentMap = MapMode.HOME;
+        lastDungeon = null;
+        // reload home maps
+        tileM.loadMap("/res/maps/home.txt");
+        fTileM.loadMap("/res/maps/mapFloatTile.txt");
+        clearObjects();
+        aSetter.setObject();
+        // reset player position to home spawn
+        player.setDefaultValues();
+    }
+
+    private void loadDungeonMap(int index){
+        currentMap = MapMode.DUNGEON;
+        clearObjects();
+
+        // generate random dungeon layout
+        int roomCount = 6 + rng.nextInt(4); // 6-9 rooms
+        RandomDungeonMap.Result result = RandomDungeonMap.generate(
+            maxWorldCol, maxWorldRow, roomCount, rng
+        );
+        lastDungeon = result;
+
+        // load generated tile map (void is collidable)
+        tileM.loadMapFromArray(result.mapTiles, true);
+        // empty float tiles for dungeon
+        fTileM.clearMap(maxWorldCol, maxWorldRow);
+
+        // place door at end room
+        object.OBJ_Door door = new object.OBJ_Door();
+        door.worldX = result.endX * tileSize;
+        door.worldY = result.endY * tileSize;
+        obj[0] = door;
+
+        // move player to start room center
+        player.worldX = result.startX * tileSize;
+        player.worldY = result.startY * tileSize;
+    }
+
+    public RandomDungeonMap.Result getDungeonMap(){
+        return currentMap == MapMode.DUNGEON ? lastDungeon : null;
+    }
+
+    private void clearObjects(){
+        for (int i = 0; i < obj.length; i++){
+            obj[i] = null;
+        }
+    }
+
 }

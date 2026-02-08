@@ -141,6 +141,33 @@ public class TileManager {
         }
     }
 
+    public void loadMapFromArray(int[][] map, boolean voidCollision) {
+        if (map == null || map.length == 0 || map[0].length == 0) return;
+
+        mapCols = map.length;
+        mapRows = map[0].length;
+        mapTileNum = new int[mapCols][mapRows];
+        mapCollisionTile = new int[mapCols][mapRows];
+
+        for (int col = 0; col < mapCols; col++) {
+            for (int row = 0; row < mapRows; row++) {
+                int tileNum = map[col][row];
+                mapTileNum[col][row] = tileNum;
+
+                boolean collide = false;
+                if (tileNum >= 0 && tileNum < tile.length && tile[tileNum] != null) {
+                    collide = tile[tileNum].collision;
+                }
+                if (voidCollision && tileNum == VOID) {
+                    collide = true;
+                }
+                if (collide) {
+                    mapCollisionTile[col][row] = 1;
+                }
+            }
+        }
+    }
+
     public void draw(Graphics2D g2) {
         int leftX = (int)Math.floor((gp.player.worldX - gp.screenWidth / 2.0) / gp.tileSize) - 3;
         int rightX = (int)Math.floor((gp.player.worldX + gp.screenWidth / 2.0) / gp.tileSize) + 3;

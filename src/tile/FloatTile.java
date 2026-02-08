@@ -121,6 +121,19 @@ public class FloatTile {
         }
     }
 
+    public void clearMap(int cols, int rows){
+        mapCols = cols;
+        mapRows = rows;
+        mapfloatTileNum = new int[mapCols][mapRows];
+        mapCollisionFTile = new int[mapCols][mapRows];
+        for (int col = 0; col < mapCols; col++){
+            for (int row = 0; row < mapRows; row++){
+                mapfloatTileNum[col][row] = 0;
+                mapCollisionFTile[col][row] = 0;
+            }
+        }
+    }
+
     // ================= FENCE AUTO TILE =================
     private BufferedImage getFenceImage(int col, int row) {
 
