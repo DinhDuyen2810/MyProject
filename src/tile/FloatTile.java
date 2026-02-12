@@ -54,6 +54,12 @@ public class FloatTile {
             floatTile[MOSS_ROCK_BLOCK].normalX = 1;
             floatTile[MOSS_ROCK_BLOCK].normalY = 2;
 
+            floatTile[ROCK_BLOCK] = new Tile();
+            floatTile[ROCK_BLOCK].image = ImageIO.read(getClass().getResourceAsStream("/res/floattiles/rock_block.png"));
+            floatTile[ROCK_BLOCK].collision = true;
+            floatTile[ROCK_BLOCK].normalX = 1;
+            floatTile[ROCK_BLOCK].normalY = 2;
+
             floatTile[BRICK] = new Tile();
             floatTile[BRICK].image = ImageIO.read(getClass().getResourceAsStream("/res/floattiles/brick_wall.png"));
             floatTile[BRICK].collision = true;

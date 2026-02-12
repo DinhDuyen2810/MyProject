@@ -9,6 +9,7 @@ public class RandomDungeonMap {
     private static final int VOID = 0;
     private static final int DIRT = 1;
     private static final int FLOAT_BEDROCK = 2;
+    private static final int FLOAT_ROCK_BLOCK = 4;
     private static final int MIN_GAP = 7;
 
     public static class Result {
@@ -32,8 +33,15 @@ public class RandomDungeonMap {
         int x, y, w, h;
         int centerX, centerY;
         int parentIndex = -1;
+        boolean isEnd = false;
+        int pattern = 0;
         int centerX() { return x + w / 2; }
         int centerY() { return y + h / 2; }
+    }
+
+    private static class Placement {
+        Room room;
+        int dir;
     }
 
     public static Result generate(int cols, int rows, int roomCount, Random rng) {
@@ -50,11 +58,11 @@ public class RandomDungeonMap {
         double bestDistSq = -1;
 
         for (int attempt = 0; attempt < 40; attempt++) {
-            List<Room> candidate = buildChain(cols, rows, roomCount, rng);
+            List<Room> candidate = buildTree(cols, rows, roomCount, rng);
             if (candidate.size() != roomCount) continue;
 
             Room start = candidate.get(0);
-            Room end = candidate.get(candidate.size() - 1);
+            Room end = findEndRoom(candidate);
             double dx = end.centerX - start.centerX;
             double dy = end.centerY - start.centerY;
             double distSq = dx * dx + dy * dy;
@@ -80,6 +88,11 @@ public class RandomDungeonMap {
             carveRoom(map, r);
         }
 
+        // add interior rock blocks based on room pattern
+        for (Room r : rooms) {
+            applyRoomPattern(floatMap, r);
+        }
+
         // carve corridors based on parent links
         for (int i = 1; i < rooms.size(); i++) {
             Room r = rooms.get(i);
@@ -96,7 +109,7 @@ public class RandomDungeonMap {
         result.mapFloatTiles = floatMap;
 
         Room start = rooms.get(0);
-        Room end = rooms.get(rooms.size() - 1);
+        Room end = findEndRoom(rooms);
         result.startX = start.centerX;
         result.startY = start.centerY;
         result.endX = end.centerX;
@@ -139,22 +152,23 @@ public class RandomDungeonMap {
         return r;
     }
 
-    private static Room createRoomNextTo(Room parent, int cols, int rows, Random rng, List<Room> rooms){
-        for (int attempt = 0; attempt < 40; attempt++) {
-            Room r = new Room();
-            r.w = randomEven(14, 20, rng);
-            r.h = randomEvenWithMaxDiff(14, 24, r.w, 6, rng);
-
+    private static Placement createRoomNextTo(Room parent, int cols, int rows, Random rng, List<Room> rooms,
+                                              int roomW, int roomH, int lastDir, int runLen, boolean limitRunLen){
+        for (int attempt = 0; attempt < 80; attempt++) {
             int dir = rng.nextInt(4);
+            if (limitRunLen && dir == lastDir && runLen >= 3) continue;
+
+            Room r = new Room();
+            r.w = roomW;
+            r.h = roomH;
+
             if (dir == 0 || dir == 1) {
-                // horizontal placement
                 int minDist = parent.w / 2 + r.w / 2 + MIN_GAP;
                 int extra = rng.nextInt(6); // 0-5 extra spacing
                 int dist = minDist + extra;
                 r.centerY = parent.centerY;
                 r.centerX = parent.centerX + (dir == 0 ? -dist : dist);
             } else {
-                // vertical placement
                 int minDist = parent.h / 2 + r.h / 2 + MIN_GAP;
                 int extra = rng.nextInt(6); // 0-5 extra spacing
                 int dist = minDist + extra;
@@ -167,63 +181,113 @@ public class RandomDungeonMap {
 
             if (!fitsBounds(r, cols, rows)) continue;
             if (overlapsAny(r, rooms)) continue;
+            if (corridorIntersectsRooms(parent, r, rooms)) continue;
 
             r.parentIndex = rooms.indexOf(parent);
-            return r;
+            Placement p = new Placement();
+            p.room = r;
+            p.dir = dir;
+            return p;
         }
         return null;
     }
 
-    private static List<Room> buildChain(int cols, int rows, int roomCount, Random rng){
+    private static List<Room> buildTree(int cols, int rows, int roomCount, Random rng){
         List<Room> rooms = new ArrayList<>();
+        if (roomCount <= 0) return rooms;
+
         Room start = createFirstRoom(cols, rows, rng);
+        start.pattern = 2;
         rooms.add(start);
 
-        int attempts = 0;
-        while (rooms.size() < roomCount - 1 && attempts < roomCount * 800) {
-            attempts++;
+        int spineLen = Math.max(2, roomCount / 2 + 1);
+        if (spineLen > roomCount) spineLen = roomCount;
+
+        int lastDir = -1;
+        int runLen = 0;
+
+        // main spine from start to end (end is last on spine)
+        for (int i = 1; i < spineLen; i++) {
             Room parent = rooms.get(rooms.size() - 1);
-            Room next = createRoomNextTo(parent, cols, rows, rng, rooms);
-            if (next != null) {
-                rooms.add(next);
-            }
-        }
+            boolean isEnd = (i == spineLen - 1);
+            int w = isEnd ? 10 : randomEven(14, 20, rng);
+            int h = isEnd ? 10 : randomEvenWithMaxDiff(14, 24, w, 6, rng);
 
-        if (rooms.size() < roomCount - 1) {
-            return rooms;
-        }
+            Placement next = createRoomNextTo(parent, cols, rows, rng, rooms, w, h, lastDir, runLen, true);
+            if (next == null) return new ArrayList<>();
 
-        // force end room as 10x10 connected to last room
-        Room last = rooms.get(rooms.size() - 1);
-        Room end = createEndRoom(cols, rows, rng);
-        end.parentIndex = rooms.indexOf(last);
-
-        // align end with last room axis and min gap
-        for (int attempt = 0; attempt < 80; attempt++) {
-            int dir = rng.nextInt(4);
-            if (dir == 0 || dir == 1) {
-                int minDist = last.w / 2 + end.w / 2 + MIN_GAP;
-                int dist = minDist + rng.nextInt(6);
-                end.centerY = last.centerY;
-                end.centerX = last.centerX + (dir == 0 ? -dist : dist);
+            if (isEnd) {
+                next.room.isEnd = true;
+                next.room.pattern = 2;
             } else {
-                int minDist = last.h / 2 + end.h / 2 + MIN_GAP;
-                int dist = minDist + rng.nextInt(6);
-                end.centerX = last.centerX;
-                end.centerY = last.centerY + (dir == 2 ? -dist : dist);
+                next.room.pattern = pickPatternWeighted(rng);
             }
-
-            end.x = end.centerX - end.w / 2;
-            end.y = end.centerY - end.h / 2;
-
-            if (!fitsBounds(end, cols, rows)) continue;
-            if (overlapsAny(end, rooms)) continue;
-            rooms.add(end);
-            if (rooms.size() == roomCount) return rooms;
+            rooms.add(next.room);
+            if (next.dir == lastDir) {
+                runLen++;
+            } else {
+                lastDir = next.dir;
+                runLen = 1;
+            }
         }
 
-        // end placement failed
-        return new ArrayList<>();
+        // degree tracking to keep start/end as single-connection and cap others at 3
+        List<Integer> degree = new ArrayList<>();
+        for (int i = 0; i < rooms.size(); i++) degree.add(0);
+        for (int i = 1; i < rooms.size(); i++) {
+            int p = rooms.get(i).parentIndex;
+            if (p >= 0) {
+                degree.set(p, degree.get(p) + 1);
+                degree.set(i, degree.get(i) + 1);
+            }
+        }
+
+        int endIndex = rooms.size() - 1;
+        int attempts = 0;
+        while (rooms.size() < roomCount && attempts < roomCount * 300) {
+            attempts++;
+
+            int parentIndex = pickBranchParent(rng, degree, endIndex);
+            if (parentIndex < 0) break;
+
+            Room parent = rooms.get(parentIndex);
+            int w = randomEven(14, 20, rng);
+            int h = randomEvenWithMaxDiff(14, 24, w, 6, rng);
+
+            Placement next = createRoomNextTo(parent, cols, rows, rng, rooms, w, h, -1, 0, false);
+            if (next == null) continue;
+
+            next.room.pattern = pickPatternWeighted(rng);
+            rooms.add(next.room);
+            degree.add(1);
+            degree.set(parentIndex, degree.get(parentIndex) + 1);
+        }
+
+        return rooms;
+    }
+
+    private static int pickBranchParent(Random rng, List<Integer> degree, int endIndex){
+        List<Integer> candidates = new ArrayList<>();
+        for (int i = 1; i < degree.size(); i++) { // skip start index 0
+            if (i == endIndex) continue;
+            if (degree.get(i) < 3) candidates.add(i);
+        }
+        if (candidates.isEmpty()) return -1;
+        return candidates.get(rng.nextInt(candidates.size()));
+    }
+
+    private static Room findEndRoom(List<Room> rooms){
+        for (Room r : rooms) {
+            if (r.isEnd) return r;
+        }
+        return rooms.get(rooms.size() - 1);
+    }
+
+    private static int pickPatternWeighted(Random rng){
+        int roll = rng.nextInt(100);
+        if (roll < 45) return 0;
+        if (roll < 90) return 1;
+        return 2;
     }
 
     private static int randomEven(int min, int max, Random rng){
@@ -278,10 +342,100 @@ public class RandomDungeonMap {
         return ax1 < bx2 && ax2 > bx1 && ay1 < by2 && ay2 > by1;
     }
 
+    private static boolean corridorIntersectsRooms(Room parent, Room r, List<Room> rooms){
+        if (parent.centerX != r.centerX && parent.centerY != r.centerY) return true;
+
+        int cx1, cy1, cx2, cy2;
+        if (parent.centerX == r.centerX) {
+            int xA = parent.centerX - 1;
+            int xB = parent.centerX;
+            int yA = Math.min(parent.centerY, r.centerY);
+            int yB = Math.max(parent.centerY, r.centerY);
+            cx1 = xA;
+            cx2 = xB;
+            cy1 = yA;
+            cy2 = yB;
+        } else {
+            int yA = parent.centerY - 1;
+            int yB = parent.centerY;
+            int xA = Math.min(parent.centerX, r.centerX);
+            int xB = Math.max(parent.centerX, r.centerX);
+            cx1 = xA;
+            cx2 = xB;
+            cy1 = yA;
+            cy2 = yB;
+        }
+
+        for (Room other : rooms) {
+            if (other == parent) continue;
+            if (rectsOverlap(cx1, cy1, cx2, cy2,
+                             other.x, other.y, other.x + other.w - 1, other.y + other.h - 1)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean rectsOverlap(int ax1, int ay1, int ax2, int ay2,
+                                        int bx1, int by1, int bx2, int by2){
+        return ax1 <= bx2 && ax2 >= bx1 && ay1 <= by2 && ay2 >= by1;
+    }
+
     private static void carveRoom(int[][] map, Room r) {
         for (int x = r.x; x < r.x + r.w; x++) {
             for (int y = r.y; y < r.y + r.h; y++) {
                 map[x][y] = DIRT;
+            }
+        }
+    }
+
+    private static void applyRoomPattern(int[][] floatMap, Room r) {
+        if (r.pattern == 2) return; // empty room
+
+        if (r.pattern == 0) {
+            // 4 corners, each has 4 blocks along the diagonal toward the center.
+            int len = 4;
+            for (int i = 0; i < len; i++) {
+                int xTL = r.x + i;
+                int yTL = r.y + i;
+                int xTR = r.x + r.w - 1 - i;
+                int yTR = r.y + i;
+                int xBL = r.x + i;
+                int yBL = r.y + r.h - 1 - i;
+                int xBR = r.x + r.w - 1 - i;
+                int yBR = r.y + r.h - 1 - i;
+
+                if (xTL >= r.x && xTL < r.x + r.w && yTL >= r.y && yTL < r.y + r.h) {
+                    floatMap[xTL][yTL] = FLOAT_ROCK_BLOCK;
+                }
+                if (xTR >= r.x && xTR < r.x + r.w && yTR >= r.y && yTR < r.y + r.h) {
+                    floatMap[xTR][yTR] = FLOAT_ROCK_BLOCK;
+                }
+                if (xBL >= r.x && xBL < r.x + r.w && yBL >= r.y && yBL < r.y + r.h) {
+                    floatMap[xBL][yBL] = FLOAT_ROCK_BLOCK;
+                }
+                if (xBR >= r.x && xBR < r.x + r.w && yBR >= r.y && yBR < r.y + r.h) {
+                    floatMap[xBR][yBR] = FLOAT_ROCK_BLOCK;
+                }
+            }
+            return;
+        }
+
+        // pattern 1: 6x6 centered block
+        int size = 6;
+        int startX = r.centerX - size / 2;
+        int startY = r.centerY - size / 2;
+        int endX = startX + size - 1;
+        int endY = startY + size - 1;
+
+        if (startX < r.x) startX = r.x;
+        if (startY < r.y) startY = r.y;
+        if (endX >= r.x + r.w) endX = r.x + r.w - 1;
+        if (endY >= r.y + r.h) endY = r.y + r.h - 1;
+
+        for (int x = startX; x <= endX; x++) {
+            for (int y = startY; y <= endY; y++) {
+                floatMap[x][y] = FLOAT_ROCK_BLOCK;
             }
         }
     }
